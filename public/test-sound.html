@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тест звуку (Gemini TTS - Дебаг)</title>
+    <title>Тест звуку (Gemini TTS - JSON)</title>
     <script src="/env-config.js"></script>
     <style>
         body { font-family: monospace; padding: 20px; background: #f0f9ff; }
@@ -12,7 +12,7 @@
     </style>
 </head>
 <body>
-    <h1>🔊 Тест звуку (Debug)</h1>
+    <h1>🔊 Тест звуку (Gemini 2.5 TTS)</h1>
     <button id="btn">Сказати "А"</button>
     <div id="log">Очікування...</div>
 
@@ -33,11 +33,10 @@
                 log("API Key: " + (apiKey ? "Знайдено (" + apiKey.substring(0, 4) + "...)" : "НЕ ЗНАЙДЕНО!"));
 
                 const ai = new GoogleGenAI({ apiKey });
-                const modelName = "gemini-2.0-flash-exp"; // Спробуємо нову експериментальну модель, яка точно підтримує аудіо
+                const modelName = "gemini-2.5-flash-preview-tts"; 
 
                 log(`Відправляю запит до моделі: ${modelName}`);
 
-                // Запит згідно з документацією (спрощений)
                 const response = await ai.models.generateContent({
                     model: modelName,
                     contents: [{ parts: [{ text: "А" }] }],
@@ -51,7 +50,7 @@
                     },
                 });
 
-                log("Відповідь (raw JSON):");
+                log("Відповідь отримано. Структура (JSON):");
                 log(JSON.stringify(response, null, 2));
 
                 const candidate = response.candidates?.[0];
@@ -63,9 +62,8 @@
                 let base64Audio = part.inlineData?.data;
                 
                 if (!base64Audio) {
-                    log("УВАГА: inlineData.data відсутній. Перевіряю інші поля...");
-                    // Іноді аудіо може бути в іншому форматі або полі, залежно від версії бібліотеки
-                    if (part.text) log("Text found instead of audio: " + part.text);
+                    log("УВАГА: inlineData.data відсутній. Перевірте лог вище!");
+                    if (part.text) log("Знайдено текст замість аудіо: " + part.text);
                 } else {
                     log(`Аудіо знайдено! Довжина base64: ${base64Audio.length}`);
                     
@@ -76,7 +74,6 @@
                     for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
 
                     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    // Gemini 2.0 Flash Exp повертає 24kHz PCM
                     const dataInt16 = new Int16Array(bytes.buffer);
                     const audioBuffer = ctx.createBuffer(1, dataInt16.length, 24000);
                     const channelData = audioBuffer.getChannelData(0);
