@@ -3,98 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тест звуку (Gemini TTS - JSON)</title>
+    <title>Advanced Sound Debugger</title>
     <script src="/env-config.js"></script>
     <style>
-        body { font-family: monospace; padding: 20px; background: #f0f9ff; }
-        button { font-size: 1.5rem; padding: 20px 40px; border-radius: 15px; border: none; background: #3b82f6; color: white; cursor: pointer; margin-bottom: 20px; }
-        #log { white-space: pre-wrap; word-break: break-all; background: #fff; padding: 10px; border: 1px solid #ccc; max-height: 500px; overflow-y: auto; }
+        body { font-family: system-ui, sans-serif; padding: 20px; background: #f0f9ff; }
+        .controls { display: flex; flex-direction: column; gap: 10px; max-width: 600px; margin-bottom: 20px; }
+        input, select, button { padding: 10px; font-size: 1rem; border-radius: 5px; border: 1px solid #ccc; }
+        button { background: #3b82f6; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background: #2563eb; }
+        button.secondary { background: #64748b; }
+        #log { white-space: pre-wrap; word-break: break-all; background: #1e293b; color: #a5f3fc; padding: 15px; border-radius: 8px; max-height: 500px; overflow-y: auto; font-family: monospace; }
+        .status { margin-bottom: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h1>🔊 Тест звуку (Gemini 2.5 TTS)</h1>
-    <button id="btn">Сказати "А"</button>
-    <div id="log">Очікування...</div>
+    <h1>🔊 Advanced Sound Debugger</h1>
+
+    <div class="controls">
+        <label>
+            Text to speak:
+            <input type="text" id="textInput" value="Hello world" style="width: 100%;">
+        </label>
+
+        <label>
+            Model:
+            <select id="modelSelect">
+                <option value="gemini-2.5-flash-preview-tts" selected>gemini-2.5-flash-preview-tts (TTS)</option>
+                <option value="gemini-2.0-flash-exp">gemini-2.0-flash-exp (Multimodal)</option>
+                <option value="gemini-1.5-flash">gemini-1.5-flash (Text Only Test)</option>
+            </select>
+        </label>
+
+        <label>
+            Voice:
+            <select id="voiceSelect">
+                <option value="Kore" selected>Kore</option>
+                <option value="Puck">Puck</option>
+                <option value="Fenrir">Fenrir</option>
+                <option value="Aoede">Aoede</option>
+            </select>
+        </label>
+
+        <label>
+            <input type="checkbox" id="useSpeechConfig" checked> Send Speech Config
+        </label>
+
+        <label>
+            <input type="checkbox" id="useResponseModalities" checked> Send responseModalities: ["AUDIO"]
+        </label>
+
+        <div style="display: flex; gap: 10px;">
+            <button onclick="runTest()">▶ Run Test</button>
+            <button class="secondary" onclick="clearLog()">Clear Log</button>
+        </div>
+    </div>
+
+    <div id="status" class="status">Ready</div>
+    <div id="log">Logs will appear here...</div>
 
     <script type="module">
         import { GoogleGenAI } from "https://esm.sh/@google/genai@^1.41.0";
 
         const logDiv = document.getElementById('log');
+        const statusDiv = document.getElementById('status');
+
+        window.clearLog = () => {
+            logDiv.innerText = '';
+        };
 
         function log(msg) {
             console.log(msg);
             logDiv.innerText += msg + '\n----------------\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
         }
 
-        async function speak() {
-            logDiv.innerText = "Початок тесту...\n";
+        window.runTest = async () => {
+            const text = document.getElementById('textInput').value;
+            const modelName = document.getElementById('modelSelect').value;
+            const voice = document.getElementById('voiceSelect').value;
+            const useSpeechConfig = document.getElementById('useSpeechConfig').checked;
+            const useResponseModalities = document.getElementById('useResponseModalities').checked;
+
+            statusDiv.innerText = "Running...";
+            log(`Starting test with:\nModel: ${modelName}\nText: "${text}"\nVoice: ${voice}\nSpeechConfig: ${useSpeechConfig}\nResponseModalities: ${useResponseModalities}`);
+
             try {
                 const apiKey = (window._env_ && window._env_.API_KEY) || '';
-                log("API Key: " + (apiKey ? "Знайдено (" + apiKey.substring(0, 4) + "...)" : "НЕ ЗНАЙДЕНО!"));
+                if (!apiKey) {
+                    log("ERROR: No API Key found!");
+                    return;
+                }
+                log(`API Key: ${apiKey.substring(0, 5)}...`);
 
                 const ai = new GoogleGenAI({ apiKey });
-                const modelName = "gemini-2.5-flash-preview-tts";
 
-                log(`Відправляю запит до моделі: ${modelName}`);
-
-                const response = await ai.models.generateContent({
-                    model: modelName,
-                    contents: [{ parts: [{ text: "А" }] }],
-                    config: {
-                        responseModalities: ["AUDIO"],
-                        speechConfig: {
-                            voiceConfig: {
-                                prebuiltVoiceConfig: { voiceName: 'Kore' },
-                            },
+                const config = {};
+                if (useResponseModalities) {
+                    config.responseModalities = ["AUDIO"];
+                }
+                if (useSpeechConfig) {
+                    config.speechConfig = {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: voice },
                         },
-                    },
-                });
-
-                log("Відповідь отримано. Структура (JSON):");
-                log(JSON.stringify(response, null, 2));
-
-                const candidate = response.candidates?.[0];
-                if (!candidate) throw new Error("No candidates in response");
-
-                const part = candidate.content?.parts?.[0];
-                if (!part) throw new Error("No parts in candidate content");
-
-                let base64Audio = part.inlineData?.data;
-
-                if (!base64Audio) {
-                    log("УВАГА: inlineData.data відсутній. Перевірте лог вище!");
-                    if (part.text) log("Знайдено текст замість аудіо: " + part.text);
-                } else {
-                    log(`Аудіо знайдено! Довжина base64: ${base64Audio.length}`);
-
-                    // Decode and Play
-                    const binaryString = atob(base64Audio);
-                    const len = binaryString.length;
-                    const bytes = new Uint8Array(len);
-                    for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
-
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const dataInt16 = new Int16Array(bytes.buffer);
-                    const audioBuffer = ctx.createBuffer(1, dataInt16.length, 24000);
-                    const channelData = audioBuffer.getChannelData(0);
-                    for (let i = 0; i < dataInt16.length; i++) {
-                        channelData[i] = dataInt16[i] / 32768.0;
-                    }
-
-                    const source = ctx.createBufferSource();
-                    source.buffer = audioBuffer;
-                    source.connect(ctx.destination);
-                    source.start();
-                    log("Відтворення запущено!");
+                    };
                 }
 
+                // Remove config if empty
+                const finalConfig = Object.keys(config).length > 0 ? config : undefined;
+
+                log("Sending request...");
+                const response = await ai.models.generateContent({
+                    model: modelName,
+                    contents: [{ parts: [{ text: text }] }],
+                    config: finalConfig
+                });
+
+                log("Response received!");
+                log(JSON.stringify(response, null, 2));
+
+                // Check finishReason
+                const candidate = response.candidates?.[0];
+                if (candidate?.finishReason) {
+                    log(`Finish Reason: ${candidate.finishReason}`);
+                }
+
+                // Try to play audio if present
+                const part = candidate?.content?.parts?.[0];
+                if (part?.inlineData?.data) {
+                    log(`Audio found! Length: ${part.inlineData.data.length}`);
+                    playAudio(part.inlineData.data);
+                } else if (part?.text) {
+                    log(`Text received: "${part.text}"`);
+                } else {
+                    log("No content parts found.");
+                }
+
+                statusDiv.innerText = "Done";
+
             } catch (e) {
-                log("ПОМИЛКА: " + e.toString());
+                statusDiv.innerText = "Error";
+                log("EXCEPTION: " + e.toString());
                 console.error(e);
             }
-        }
+        };
 
-        document.getElementById('btn').addEventListener('click', speak);
+        function playAudio(base64) {
+            try {
+                const binaryString = atob(base64);
+                const len = binaryString.length;
+                const bytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const dataInt16 = new Int16Array(bytes.buffer);
+                const audioBuffer = ctx.createBuffer(1, dataInt16.length, 24000); // 24kHz for Gemini
+                const channelData = audioBuffer.getChannelData(0);
+                for (let i = 0; i < dataInt16.length; i++) {
+                    channelData[i] = dataInt16[i] / 32768.0;
+                }
+
+                const source = ctx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(ctx.destination);
+                source.start();
+                log("Audio playing...");
+            } catch (e) {
+                log("Audio Playback Error: " + e.message);
+            }
+        }
     </script>
 </body>
 </html>

@@ -101,6 +101,17 @@ const playBuffer = (buffer: AudioBuffer) => {
   source.start();
 };
 
+const speakBrowser = (text: string) => {
+  try {
+    console.log(`[TTS] Fallback to Browser Speech for "${text}"`);
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'uk-UA';
+    window.speechSynthesis.speak(utterance);
+  } catch (e) {
+    console.error("Browser TTS Error:", e);
+  }
+};
+
 const tryLoadLocalMp3 = async (char: string): Promise<AudioBuffer | null> => {
   try {
     const ctx = getAudioContext();
@@ -128,15 +139,18 @@ const speakGemini = async (char: string, pronunciation: string, apiKey: string) 
   const effectiveKey = apiKey || getEnvKey();
   if (!effectiveKey) {
     console.warn("No API Key available for Gemini TTS");
+    speakBrowser(pronunciation || char);
     return;
   }
 
   try {
-    console.log(`[TTS] Запит до Gemini для літери "${char}"...`);
+    const textToSpeak = pronunciation || char;
+    console.log(`[TTS] Запит до Gemini для "${textToSpeak}"...`);
     const ai = new GoogleGenAI({ apiKey: effectiveKey });
+
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text: pronunciation || char }] }],
+      contents: [{ parts: [{ text: textToSpeak }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
@@ -150,18 +164,19 @@ const speakGemini = async (char: string, pronunciation: string, apiKey: string) 
     // Логуємо повну структуру відповіді для дебагу
     console.log("[TTS] Full Gemini Response:", JSON.stringify(response, null, 2));
 
-    // Перевіряємо, чи є відповідь всередині об'єкта (для деяких версій SDK)
     const actualResponse = (response as any).response || response;
-
     const candidate = actualResponse.candidates?.[0];
+
+    if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
+        console.warn(`[TTS] Gemini finishReason: ${candidate.finishReason}`);
+    }
+
     const part = candidate?.content?.parts?.[0];
     const base64Audio = part?.inlineData?.data;
 
     if (!base64Audio) {
-      console.warn("[TTS] Gemini повернув порожню відповідь (немає аудіо). Структура:", actualResponse);
-      if (part?.text) {
-        console.warn("[TTS] Отримано текст замість аудіо:", part.text);
-      }
+      console.warn("[TTS] Gemini не повернув аудіо. Перехід на браузерний синтез.");
+      speakBrowser(textToSpeak);
       return;
     }
 
@@ -177,6 +192,7 @@ const speakGemini = async (char: string, pronunciation: string, apiKey: string) 
     playBuffer(audioBuffer);
   } catch (error: any) {
     console.error("Gemini TTS Error:", error);
+    speakBrowser(pronunciation || char);
   }
 };
 
