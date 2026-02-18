@@ -1,17 +1,3 @@
 version: '3.8'
-
 services:
-  abc-helper:
-    build: 
-      context: .
-      args:
-        - API_KEY=${API_KEY}
-    container_name: abc-helper-app
-    restart: always
-    ports:
-      - "7890:80"
-    environment:
-      - VITE_API_KEY=${API_KEY}
-    volumes:
-      # Монтуємо папку зі звуками, щоб можна було додавати нові без перезбірки
-      - ./sounds:/usr/share/nginx/html/sounds:ro
+  abc-helper
