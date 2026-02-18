@@ -117,8 +117,8 @@ const speakGemini = async (char: string, pronunciation: string, apiKey: string) 
   try {
     const ai = new GoogleGenAI({ apiKey: effectiveKey });
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: [{ parts: [{ text: `Ти вчителька. Вимови чітко українську літеру "${char}" як "${pronunciation}". Тільки один звук.` }] }],
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text: `Вимови чітко українську літеру "${char}". Тільки звук.` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
@@ -147,9 +147,6 @@ export const speakUkrainian = async (char: string, pronunciation: string) => {
   await speakGemini(char, pronunciation, settings.geminiApiKey);
 };
 
-/**
- * Перевірка малюнка за допомогою Vision AI
- */
 export const checkDrawing = async (base64Image: string, targetLetter: string): Promise<boolean> => {
   const settings = getSettings();
   const apiKey = settings.geminiApiKey || process.env.API_KEY;
@@ -163,7 +160,7 @@ export const checkDrawing = async (base64Image: string, targetLetter: string): P
         {
           parts: [
             { inlineData: { mimeType: "image/png", data: base64Image.split(',')[1] } },
-            { text: `Це малюнок дитини, яка вчиться писати. Чи схоже це на українську літеру "${targetLetter}"? Відповідай ТІЛЬКИ словом TRUE або FALSE.` }
+            { text: `Це малюнок дитини. Чи схоже це на українську літеру "${targetLetter}"? Відповідай TRUE або FALSE.` }
           ]
         }
       ]
