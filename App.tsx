@@ -32,45 +32,45 @@ const App: React.FC = () => {
         ⚙️
       </button>
 
-      <div className="text-center mb-12 z-10">
-        <h1 className="text-5xl md:text-7xl font-black text-blue-600 mb-4 drop-shadow-sm tracking-tight">
+      <div className="text-center mb-8 md:mb-12 z-10 px-4">
+        <h1 className="text-4xl md:text-7xl font-black text-blue-600 mb-4 drop-shadow-sm tracking-tight leading-tight">
           Азбука-Помічник
         </h1>
-        <p className="text-xl md:text-2xl text-blue-400 font-bold bg-white/70 inline-block px-8 py-2 rounded-full shadow-sm">
+        <p className="text-lg md:text-2xl text-blue-400 font-bold bg-white/70 inline-block px-6 py-2 rounded-full shadow-sm">
           Вчимо букви весело та легко! 🎨
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl z-10">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 w-full max-w-6xl z-10 px-4">
         <button 
           onClick={() => startMode(AppMode.LEARN)}
-          className="bg-white p-10 rounded-[3rem] shadow-xl hover:shadow-2xl transition-all border-b-[12px] border-orange-400 group transform hover:-translate-y-2 active:translate-y-1 text-center"
+          className="bg-white p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] shadow-xl hover:shadow-2xl transition-all border-b-[10px] md:border-b-[12px] border-orange-400 group transform hover:-translate-y-2 active:translate-y-1 text-center"
         >
-          <div className="text-8xl mb-6 group-hover:scale-110 transition-transform">📖</div>
-          <h2 className="text-3xl font-black text-orange-600 mb-3">Назви букву</h2>
-          <p className="text-gray-500 font-medium text-lg">Бачиш букву — називаєш вголос</p>
+          <div className="text-6xl md:text-8xl mb-4 md:mb-6 group-hover:scale-110 transition-transform">📖</div>
+          <h2 className="text-2xl md:text-3xl font-black text-orange-600 mb-2 md:mb-3">Назви букву</h2>
+          <p className="text-gray-500 font-medium text-base md:text-lg">Бачиш букву — називаєш вголос</p>
         </button>
 
         <button 
           onClick={() => startMode(AppMode.QUIZ)}
-          className="bg-white p-10 rounded-[3rem] shadow-xl hover:shadow-2xl transition-all border-b-[12px] border-green-400 group transform hover:-translate-y-2 active:translate-y-1 text-center"
+          className="bg-white p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] shadow-xl hover:shadow-2xl transition-all border-b-[10px] md:border-b-[12px] border-green-400 group transform hover:-translate-y-2 active:translate-y-1 text-center"
         >
-          <div className="text-8xl mb-6 group-hover:scale-110 transition-transform">🎯</div>
-          <h2 className="text-3xl font-black text-green-600 mb-3">Впізнай букву</h2>
-          <p className="text-gray-500 font-medium text-lg">Слухаєш голос — вибираєш правильну</p>
+          <div className="text-6xl md:text-8xl mb-4 md:mb-6 group-hover:scale-110 transition-transform">🎯</div>
+          <h2 className="text-2xl md:text-3xl font-black text-green-600 mb-2 md:mb-3">Впізнай букву</h2>
+          <p className="text-gray-500 font-medium text-base md:text-lg">Слухаєш голос — вибираєш правильну</p>
         </button>
 
         <button 
           onClick={() => startMode(AppMode.WRITE)}
-          className="bg-white p-10 rounded-[3rem] shadow-xl hover:shadow-2xl transition-all border-b-[12px] border-purple-400 group transform hover:-translate-y-2 active:translate-y-1 text-center"
+          className="bg-white p-8 md:p-10 rounded-[2.5rem] md:rounded-[3rem] shadow-xl hover:shadow-2xl transition-all border-b-[10px] md:border-b-[12px] border-purple-400 group transform hover:-translate-y-2 active:translate-y-1 text-center"
         >
-          <div className="text-8xl mb-6 group-hover:scale-110 transition-transform">✍️</div>
-          <h2 className="text-3xl font-black text-purple-600 mb-3">Напиши букву</h2>
-          <p className="text-gray-500 font-medium text-lg">Малюєш пальчиком на екрані</p>
+          <div className="text-6xl md:text-8xl mb-4 md:mb-6 group-hover:scale-110 transition-transform">✍️</div>
+          <h2 className="text-2xl md:text-3xl font-black text-purple-600 mb-2 md:mb-3">Напиши букву</h2>
+          <p className="text-gray-500 font-medium text-base md:text-lg">Малюєш пальчиком на екрані</p>
         </button>
       </div>
 
-      <div className="mt-16 text-center text-blue-300 font-bold tracking-widest uppercase text-sm">
+      <div className="mt-12 md:mt-16 text-center text-blue-300 font-bold tracking-widest uppercase text-[10px] md:text-sm">
         Розроблено спеціально для першокласників 🇺🇦
       </div>
     </div>

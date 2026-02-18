@@ -6,10 +6,10 @@ services:
     container_name: abc-helper-app
     restart: always
     ports:
-      - "9090:80"
+      - "7890:80"
     environment:
       - API_KEY=${API_KEY}
     volumes:
-      # rw (read-write) дозволяє nginx створити папку sounds всередині для наступного монтування
+      # rw (read-write) необхідний, щоб Docker міг створити папку sounds/ всередині як точку монтування
       - ./dist:/usr/share/nginx/html:rw
       - ./sounds:/usr/share/nginx/html/sounds:ro
