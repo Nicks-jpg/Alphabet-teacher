@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import { AppMode } from './types';
 import { RecallMode } from './components/RecallMode';
 import { QuizMode } from './components/QuizMode';
+import { WriteMode } from './components/WriteMode';
 import { SettingsModal } from './components/SettingsModal';
 import { unlockAudio } from './services/speechService';
 
@@ -17,7 +17,6 @@ const App: React.FC = () => {
 
   const renderMenu = () => (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-blue-50 relative">
-      {/* Settings Button - changed to fixed and added higher z-index for mobile accessibility */}
       <button 
         onClick={(e) => {
           e.stopPropagation();
@@ -29,28 +28,37 @@ const App: React.FC = () => {
         ⚙️
       </button>
 
-      <div className="text-center mb-12">
+      <div className="text-center mb-8">
         <h1 className="text-4xl md:text-5xl font-bold text-blue-600 mb-4 drop-shadow-sm">Азбука-Помічник</h1>
         <p className="text-lg md:text-xl text-gray-600">Вчимо букви весело та легко! 🎨</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 w-full max-w-4xl">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-6xl">
         <button 
           onClick={() => startMode(AppMode.LEARN)}
-          className="bg-white p-6 md:p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all border-4 border-orange-400 group transform hover:-translate-y-1 active:translate-y-0 text-left"
+          className="bg-white p-6 rounded-3xl shadow-xl hover:shadow-2xl transition-all border-4 border-orange-400 group transform hover:-translate-y-1 active:translate-y-0 text-left"
         >
-          <div className="text-6xl md:text-7xl mb-4 group-hover:animate-bounce">📖</div>
-          <h2 className="text-2xl md:text-3xl font-bold text-orange-600 mb-2">Назви букву</h2>
-          <p className="text-gray-500 text-sm md:text-base">Бачиш букву — називаєш вголос — перевіряєш себе.</p>
+          <div className="text-6xl mb-4 group-hover:animate-bounce">📖</div>
+          <h2 className="text-2xl font-bold text-orange-600 mb-2">Назви букву</h2>
+          <p className="text-gray-500 text-sm">Бачиш букву — називаєш вголос — перевіряєш.</p>
         </button>
 
         <button 
           onClick={() => startMode(AppMode.QUIZ)}
-          className="bg-white p-6 md:p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all border-4 border-green-400 group transform hover:-translate-y-1 active:translate-y-0 text-left"
+          className="bg-white p-6 rounded-3xl shadow-xl hover:shadow-2xl transition-all border-4 border-green-400 group transform hover:-translate-y-1 active:translate-y-0 text-left"
         >
-          <div className="text-6xl md:text-7xl mb-4 group-hover:animate-bounce">🎯</div>
-          <h2 className="text-2xl md:text-3xl font-bold text-green-600 mb-2">Впізнай букву</h2>
-          <p className="text-gray-500 text-sm md:text-base">Слухаєш голос — вибираєш правильну букву з варіантів.</p>
+          <div className="text-6xl mb-4 group-hover:animate-bounce">🎯</div>
+          <h2 className="text-2xl font-bold text-green-600 mb-2">Впізнай букву</h2>
+          <p className="text-gray-500 text-sm">Слухаєш голос — вибираєш правильну букву.</p>
+        </button>
+
+        <button 
+          onClick={() => startMode(AppMode.WRITE)}
+          className="bg-white p-6 rounded-3xl shadow-xl hover:shadow-2xl transition-all border-4 border-purple-400 group transform hover:-translate-y-1 active:translate-y-0 text-left"
+        >
+          <div className="text-6xl mb-4 group-hover:animate-bounce">✍️</div>
+          <h2 className="text-2xl font-bold text-purple-600 mb-2">Напиши букву</h2>
+          <p className="text-gray-500 text-sm">Слухаєш букву — малюєш її пальцем на екрані.</p>
         </button>
       </div>
 
@@ -65,6 +73,7 @@ const App: React.FC = () => {
       {mode === AppMode.MENU && renderMenu()}
       {mode === AppMode.LEARN && <RecallMode onBack={() => setMode(AppMode.MENU)} />}
       {mode === AppMode.QUIZ && <QuizMode onBack={() => setMode(AppMode.MENU)} />}
+      {mode === AppMode.WRITE && <WriteMode onBack={() => setMode(AppMode.MENU)} />}
       
       {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
     </main>

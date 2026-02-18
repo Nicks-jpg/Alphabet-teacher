@@ -89,16 +89,11 @@ const playBuffer = (buffer: AudioBuffer) => {
   source.start();
 };
 
-/**
- * Спроба завантажити локальний MP3 файл
- */
 const tryLoadLocalMp3 = async (char: string): Promise<AudioBuffer | null> => {
   try {
     const ctx = getAudioContext();
     const response = await fetch(`/sounds/${encodeURIComponent(char)}.mp3`);
-    
     if (!response.ok) return null;
-
     const arrayBuffer = await response.arrayBuffer();
     return await ctx.decodeAudioData(arrayBuffer);
   } catch (e) {
@@ -111,26 +106,19 @@ const speakGemini = async (char: string, pronunciation: string, apiKey: string) 
     playBuffer(audioCache.get(char)!);
     return;
   }
-
   const localBuffer = await tryLoadLocalMp3(char);
   if (localBuffer) {
     audioCache.set(char, localBuffer);
     playBuffer(localBuffer);
     return;
   }
-
   const effectiveKey = apiKey || process.env.API_KEY;
   if (!effectiveKey) return;
-
   try {
     const ai = new GoogleGenAI({ apiKey: effectiveKey });
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
-      contents: [{ 
-        parts: [{ 
-          text: `Ти вчителька. Вимови чітко українську літеру "${char}" як "${pronunciation}". Тільки один звук.` 
-        }] 
-      }],
+      model: "gemini-3-flash-preview",
+      contents: [{ parts: [{ text: `Ти вчителька. Вимови чітко українську літеру "${char}" як "${pronunciation}". Тільки один звук.` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
@@ -140,14 +128,11 @@ const speakGemini = async (char: string, pronunciation: string, apiKey: string) 
         },
       },
     });
-
     const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
     if (!base64Audio) return;
-
     const ctx = getAudioContext();
     const decodedBytes = decode(base64Audio);
     const audioBuffer = await decodeAudioData(decodedBytes, ctx, 24000, 1);
-    
     audioCache.set(char, audioBuffer);
     playBuffer(audioBuffer);
   } catch (error: any) {
@@ -159,10 +144,34 @@ export const speakUkrainian = async (char: string, pronunciation: string) => {
   const settings = getSettings();
   const ctx = getAudioContext();
   if (ctx.state === 'suspended') await ctx.resume();
+  await speakGemini(char, pronunciation, settings.geminiApiKey);
+};
 
-  if (settings.ttsProvider === TTSProvider.GEMINI) {
-    await speakGemini(char, pronunciation, settings.geminiApiKey);
-  } else {
-    await speakGemini(char, pronunciation, settings.geminiApiKey); 
+/**
+ * Перевірка малюнка за допомогою Vision AI
+ */
+export const checkDrawing = async (base64Image: string, targetLetter: string): Promise<boolean> => {
+  const settings = getSettings();
+  const apiKey = settings.geminiApiKey || process.env.API_KEY;
+  if (!apiKey) return false;
+
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [
+        {
+          parts: [
+            { inlineData: { mimeType: "image/png", data: base64Image.split(',')[1] } },
+            { text: `Це малюнок дитини, яка вчиться писати. Чи схоже це на українську літеру "${targetLetter}"? Відповідай ТІЛЬКИ словом TRUE або FALSE.` }
+          ]
+        }
+      ]
+    });
+    const text = response.text?.trim().toUpperCase();
+    return text?.includes("TRUE") || false;
+  } catch (e) {
+    console.error("AI Check Error:", e);
+    return false;
   }
 };

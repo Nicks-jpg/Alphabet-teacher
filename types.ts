@@ -1,7 +1,8 @@
 export enum AppMode {
   MENU = 'MENU',
   LEARN = 'LEARN',
-  QUIZ = 'QUIZ'
+  QUIZ = 'QUIZ',
+  WRITE = 'WRITE'
 }
 
 export interface Letter {
