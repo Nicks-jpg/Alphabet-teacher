@@ -3,10 +3,12 @@ import React, { useState } from 'react';
 import { AppMode } from './types';
 import { RecallMode } from './components/RecallMode';
 import { QuizMode } from './components/QuizMode';
-import { unlockAudio } from './services/geminiService';
+import { SettingsModal } from './components/SettingsModal';
+import { unlockAudio } from './services/speechService';
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<AppMode>(AppMode.MENU);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const startMode = async (newMode: AppMode) => {
     await unlockAudio();
@@ -14,7 +16,16 @@ const App: React.FC = () => {
   };
 
   const renderMenu = () => (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-blue-50">
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-blue-50 relative">
+      {/* Settings Button */}
+      <button 
+        onClick={() => setIsSettingsOpen(true)}
+        className="absolute top-6 right-6 bg-white p-4 rounded-full shadow-lg hover:rotate-90 transition-transform text-2xl"
+        title="Налаштування API"
+      >
+        ⚙️
+      </button>
+
       <div className="text-center mb-12">
         <h1 className="text-5xl font-bold text-blue-600 mb-4 drop-shadow-sm">Азбука-Помічник</h1>
         <p className="text-xl text-gray-600">Вчимо букви весело та легко! 🎨</p>
@@ -51,6 +62,8 @@ const App: React.FC = () => {
       {mode === AppMode.MENU && renderMenu()}
       {mode === AppMode.LEARN && <RecallMode onBack={() => setMode(AppMode.MENU)} />}
       {mode === AppMode.QUIZ && <QuizMode onBack={() => setMode(AppMode.MENU)} />}
+      
+      {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
     </main>
   );
 };

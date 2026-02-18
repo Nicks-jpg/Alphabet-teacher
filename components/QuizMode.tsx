@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { UKRAINIAN_ALPHABET } from '../constants';
-import { speakUkrainian, unlockAudio } from '../services/geminiService';
+import { speakUkrainian, unlockAudio } from '../services/speechService';
 
 export const QuizMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [targetChar, setTargetChar] = useState<string>('');
