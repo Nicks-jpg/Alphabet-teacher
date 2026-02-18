@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест звуку (Gemini TTS)</title>
+    <script src="/env-config.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f0f9ff; }
+        button { font-size: 1.5rem; padding: 20px 40px; border-radius: 15px; border: none; background: #3b82f6; color: white; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        button:active { transform: scale(0.95); }
+        #status { margin-top: 20px; font-weight: bold; color: #333; }
+        #log { margin-top: 20px; font-size: 0.8rem; color: #666; max-width: 80%; white-space: pre-wrap; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <h1>🔊 Тест звуку</h1>
+    <button id="btn">Сказати "А"</button>
+    <div id="status">Натисніть кнопку</div>
+    <div id="log"></div>
+
+    <script type="module">
+        import { GoogleGenAI } from "https://esm.sh/@google/genai@^1.41.0";
+
+        const logDiv = document.getElementById('log');
+        const statusDiv = document.getElementById('status');
+
+        function log(msg) {
+            console.log(msg);
+            logDiv.innerText += msg + '\n';
+        }
+
+        async function speak() {
+            try {
+                statusDiv.innerText = "Запит до Gemini...";
+                log("Починаю тест...");
+
+                const apiKey = (window._env_ && window._env_.API_KEY) || '';
+                if (!apiKey) {
+                    throw new Error("API Key не знайдено в window._env_.API_KEY");
+                }
+                log("API Key знайдено (перші 4 символи): " + apiKey.substring(0, 4) + "...");
+
+                const ai = new GoogleGenAI({ apiKey });
+                log("Модель: gemini-2.5-flash-preview-tts");
+
+                const response = await ai.models.generateContent({
+                    model: "gemini-2.5-flash-preview-tts",
+                    contents: [{ parts: [{ text: "А" }] }],
+                    config: {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: {
+                            voiceConfig: {
+                                prebuiltVoiceConfig: { voiceName: 'Kore' },
+                            },
+                        },
+                    },
+                });
+
+                log("Відповідь отримано.");
+                const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+
+                if (!base64Audio) {
+                    throw new Error("Немає аудіо в відповіді");
+                }
+                log("Аудіо дані (base64) отримано, довжина: " + base64Audio.length);
+
+                // Decode and Play
+                const binaryString = atob(base64Audio);
+                const len = binaryString.length;
+                const bytes = new Uint8Array(len);
+                for (let i = 0; i < len; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+
+                log("Створення AudioContext...");
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (ctx.state === 'suspended') {
+                    await ctx.resume();
+                    log("AudioContext resumed");
+                }
+
+                // Decode int16 PCM (24kHz)
+                const dataInt16 = new Int16Array(bytes.buffer);
+                const frameCount = dataInt16.length;
+                const audioBuffer = ctx.createBuffer(1, frameCount, 24000);
+                const channelData = audioBuffer.getChannelData(0);
+                for (let i = 0; i < frameCount; i++) {
+                    channelData[i] = dataInt16[i] / 32768.0;
+                }
+
+                log("Відтворення...");
+                const source = ctx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(ctx.destination);
+                source.start();
+
+                statusDiv.innerText = "Грає звук! 🎶";
+                log("Успіх!");
+
+            } catch (e) {
+                console.error(e);
+                statusDiv.innerText = "Помилка: " + e.message;
+                log("ERROR: " + e.toString());
+            }
+        }
+
+        document.getElementById('btn').addEventListener('click', speak);
+    </script>
+</body>
+</html>
