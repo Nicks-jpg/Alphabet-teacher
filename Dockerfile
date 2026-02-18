@@ -1,11 +1,13 @@
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json vite.config.ts tsconfig.json ./
+RUN npm ci
+COPY . .
+RUN npm run build  # Створить dist/
+
 FROM nginx:alpine
-# Копіюємо React build
-COPY dist/ /usr/share/nginx/html/
-COPY public/ /usr/share/nginx/html/public/
-# Фікс nginx html dir (mkdir sounds якщо немає)
-RUN mkdir -p /usr/share/nginx/html/sounds && \
-    chmod -R 755 /usr/share/nginx/html/sounds
-# nginx.conf для SPA routing
+COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN mkdir -p /usr/share/nginx/html/sounds && chmod 755 /usr/share/nginx/html/sounds
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
