@@ -3,6 +3,7 @@ version: '3.8'
 services:
   abc-helper:
     build: .
+    image: abc-helper-local:latest
     container_name: abc-helper-app
     restart: always
     ports:
@@ -11,4 +12,3 @@ services:
       - API_KEY=${API_KEY}
     volumes:
       - ./sounds:/usr/share/nginx/html/sounds
-      - ./settings_data:/usr/share/nginx/html/data
