@@ -39,7 +39,8 @@ export const saveSettings = (settings: AppSettings) => {
 
 export const getAudioContext = () => {
   if (!sharedAudioContext) {
-    sharedAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    // Не задаємо sampleRate при створенні контексту, щоб браузер вибрав найкращий
+    sharedAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
   }
   return sharedAudioContext;
 };
@@ -77,7 +78,9 @@ const decodeAudioData = async (
   sampleRate: number,
   numChannels: number,
 ): Promise<AudioBuffer> => {
-  const dataInt16 = new Int16Array(data.buffer);
+  // Важливо: Використовуємо byteOffset, якщо Uint8Array був створений не з початку буфера
+  // Або, якщо це безпечно, просто ділимо довжину на 2
+  const dataInt16 = new Int16Array(data.buffer, data.byteOffset, data.byteLength / 2);
   const frameCount = dataInt16.length / numChannels;
   const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
 
@@ -129,6 +132,7 @@ const speakGemini = async (char: string, pronunciation: string, apiKey: string) 
   }
 
   try {
+    console.log(`[TTS] Запит до Gemini для літери "${char}"...`);
     const ai = new GoogleGenAI({ apiKey: effectiveKey });
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
@@ -142,11 +146,21 @@ const speakGemini = async (char: string, pronunciation: string, apiKey: string) 
         },
       },
     });
+
     const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    if (!base64Audio) return;
+    if (!base64Audio) {
+      console.warn("[TTS] Gemini повернув порожню відповідь (немає аудіо)");
+      return;
+    }
+
+    console.log(`[TTS] Отримано аудіо (${base64Audio.length} байт base64). Декодую...`);
     const ctx = getAudioContext();
     const decodedBytes = decode(base64Audio);
+
+    // Gemini повертає 24kHz PCM. Передаємо це явно.
     const audioBuffer = await decodeAudioData(decodedBytes, ctx, 24000, 1);
+    console.log(`[TTS] Аудіо декодовано (${audioBuffer.duration.toFixed(2)}с). Граю...`);
+
     audioCache.set(char, audioBuffer);
     playBuffer(audioBuffer);
   } catch (error: any) {
