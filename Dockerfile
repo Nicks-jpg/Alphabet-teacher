@@ -1,9 +1,9 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY package*.json vite.config.ts tsconfig.json ./
-RUN npm ci
+COPY package.json package-lock.json* ./
+RUN npm install --prefer-offline --no-audit --network-timeout 100000
 COPY . .
-RUN npm run build  # Створить dist/
+RUN npm run build
 
 FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
