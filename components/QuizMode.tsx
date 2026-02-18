@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { UKRAINIAN_ALPHABET } from '../constants';
+import { UKRAINIAN_ALPHABET, ExtendedLetter } from '../constants';
 import { speakUkrainian, unlockAudio, getSettings } from '../services/speechService';
 
 export const QuizMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
@@ -13,7 +13,7 @@ export const QuizMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       .map(s => s.trim().toUpperCase())
       .filter(s => s.length > 0);
 
-    let pool = [...UKRAINIAN_ALPHABET];
+    let pool: ExtendedLetter[] = [...UKRAINIAN_ALPHABET];
     const priorityItems = UKRAINIAN_ALPHABET.filter(l => priorities.includes(l.char));
     
     // Додаємо додаткові копії пріоритетних букв (4x вага)
@@ -21,7 +21,7 @@ export const QuizMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       pool = [...pool, ...priorityItems];
     }
 
-    let result = [];
+    let result: ExtendedLetter[] = [];
     while (result.length < limit) {
       const shuffled = [...pool].sort(() => Math.random() - 0.5);
       result = [...result, ...shuffled];

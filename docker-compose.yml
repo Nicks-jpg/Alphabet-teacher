@@ -1,3 +1,10 @@
 version: '3.8'
 services:
-  abc-helper
+  abc-helper:
+    build: .
+    container_name: abc-helper
+    restart: unless-stopped
+    ports:
+      - "3030:80"
+    environment:
+      - API_KEY=${API_KEY}
