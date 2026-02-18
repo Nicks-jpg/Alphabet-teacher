@@ -16,75 +16,75 @@ const App: React.FC = () => {
   };
 
   const renderMenu = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-blue-50 to-sky-100 relative overflow-hidden">
-      {/* Background Decorations */}
-      <div className="absolute top-[-50px] left-[-50px] w-64 h-64 bg-yellow-200 rounded-full blur-3xl opacity-20"></div>
-      <div className="absolute bottom-[-50px] right-[-50px] w-96 h-96 bg-purple-200 rounded-full blur-3xl opacity-20"></div>
+    <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 bg-gradient-to-b from-sky-50 to-blue-100 relative overflow-hidden min-h-screen">
+      {/* Декоративні елементи на фоні */}
+      <div className="absolute top-[-100px] left-[-100px] w-80 h-80 bg-yellow-200 rounded-full blur-3xl opacity-20"></div>
+      <div className="absolute bottom-[-100px] right-[-100px] w-96 h-96 bg-purple-200 rounded-full blur-3xl opacity-20"></div>
 
       <button 
         onClick={(e) => {
           e.stopPropagation();
           setIsSettingsOpen(true);
         }}
-        className="fixed top-4 right-4 bg-white p-3 rounded-full shadow-lg hover:rotate-90 transition-transform text-xl z-20 border-2 border-blue-100 active:scale-90"
+        className="fixed top-6 right-6 bg-white p-4 rounded-full shadow-xl hover:rotate-90 transition-transform text-2xl z-20 border-2 border-blue-50 active:scale-90"
         title="Налаштування"
       >
         ⚙️
       </button>
 
-      <div className="text-center mb-10 z-10">
-        <h1 className="text-4xl md:text-6xl font-black text-blue-600 mb-2 drop-shadow-sm tracking-tight">
+      <div className="text-center mb-12 z-10">
+        <h1 className="text-5xl md:text-7xl font-black text-blue-600 mb-4 drop-shadow-sm tracking-tight">
           Азбука-Помічник
         </h1>
-        <p className="text-lg md:text-xl text-blue-400 font-bold bg-white/60 inline-block px-5 py-1.5 rounded-full">
-          Вчимо букви весело! 🎨
+        <p className="text-xl md:text-2xl text-blue-400 font-bold bg-white/70 inline-block px-8 py-2 rounded-full shadow-sm">
+          Вчимо букви весело та легко! 🎨
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl z-10 px-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl z-10">
         <button 
           onClick={() => startMode(AppMode.LEARN)}
-          className="bg-white p-6 rounded-[2rem] shadow-lg hover:shadow-xl transition-all border-b-8 border-orange-400 group transform hover:-translate-y-1 active:translate-y-1 text-center"
+          className="bg-white p-10 rounded-[3rem] shadow-xl hover:shadow-2xl transition-all border-b-[12px] border-orange-400 group transform hover:-translate-y-2 active:translate-y-1 text-center"
         >
-          <div className="text-6xl mb-4 group-hover:scale-110 transition-transform">📖</div>
-          <h2 className="text-2xl font-black text-orange-600 mb-2">Назви букву</h2>
-          <p className="text-sm text-gray-500 font-medium">Бачиш букву — називаєш вголос</p>
+          <div className="text-8xl mb-6 group-hover:scale-110 transition-transform">📖</div>
+          <h2 className="text-3xl font-black text-orange-600 mb-3">Назви букву</h2>
+          <p className="text-gray-500 font-medium text-lg">Бачиш букву — називаєш вголос</p>
         </button>
 
         <button 
           onClick={() => startMode(AppMode.QUIZ)}
-          className="bg-white p-6 rounded-[2rem] shadow-lg hover:shadow-xl transition-all border-b-8 border-green-400 group transform hover:-translate-y-1 active:translate-y-1 text-center"
+          className="bg-white p-10 rounded-[3rem] shadow-xl hover:shadow-2xl transition-all border-b-[12px] border-green-400 group transform hover:-translate-y-2 active:translate-y-1 text-center"
         >
-          <div className="text-6xl mb-4 group-hover:scale-110 transition-transform">🎯</div>
-          <h2 className="text-2xl font-black text-green-600 mb-2">Впізнай букву</h2>
-          <p className="text-sm text-gray-500 font-medium">Слухаєш голос — вибираєш правильну</p>
+          <div className="text-8xl mb-6 group-hover:scale-110 transition-transform">🎯</div>
+          <h2 className="text-3xl font-black text-green-600 mb-3">Впізнай букву</h2>
+          <p className="text-gray-500 font-medium text-lg">Слухаєш голос — вибираєш правильну</p>
         </button>
 
         <button 
           onClick={() => startMode(AppMode.WRITE)}
-          className="bg-white p-6 rounded-[2rem] shadow-lg hover:shadow-xl transition-all border-b-8 border-purple-400 group transform hover:-translate-y-1 active:translate-y-1 text-center sm:col-span-2 lg:col-span-1"
+          className="bg-white p-10 rounded-[3rem] shadow-xl hover:shadow-2xl transition-all border-b-[12px] border-purple-400 group transform hover:-translate-y-2 active:translate-y-1 text-center"
         >
-          <div className="text-6xl mb-4 group-hover:scale-110 transition-transform">✍️</div>
-          <h2 className="text-2xl font-black text-purple-600 mb-2">Напиши букву</h2>
-          <p className="text-sm text-gray-500 font-medium">Малюєш пальчиком на екрані</p>
+          <div className="text-8xl mb-6 group-hover:scale-110 transition-transform">✍️</div>
+          <h2 className="text-3xl font-black text-purple-600 mb-3">Напиши букву</h2>
+          <p className="text-gray-500 font-medium text-lg">Малюєш пальчиком на екрані</p>
         </button>
       </div>
 
-      <div className="mt-12 text-center text-blue-300 font-bold tracking-widest uppercase text-[10px]">
-        Зроблено спеціально для першокласників 🇺🇦
+      <div className="mt-16 text-center text-blue-300 font-bold tracking-widest uppercase text-sm">
+        Розроблено спеціально для першокласників 🇺🇦
       </div>
     </div>
   );
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       {mode === AppMode.MENU && renderMenu()}
       {mode === AppMode.LEARN && <RecallMode onBack={() => setMode(AppMode.MENU)} />}
       {mode === AppMode.QUIZ && <QuizMode onBack={() => setMode(AppMode.MENU)} />}
       {mode === AppMode.WRITE && <WriteMode onBack={() => setMode(AppMode.MENU)} />}
       
       {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
-    </>
+    </div>
   );
 };
 

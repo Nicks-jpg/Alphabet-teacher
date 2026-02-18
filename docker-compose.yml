@@ -6,11 +6,10 @@ services:
     container_name: abc-helper-app
     restart: always
     ports:
-      - "8080:80"
+      - "9090:80"
     environment:
       - API_KEY=${API_KEY}
     volumes:
-      # Змінюємо :ro на :rw для основного шляху, щоб Docker міг створити підпапку sounds
+      # rw (read-write) дозволяє nginx створити папку sounds всередині для наступного монтування
       - ./dist:/usr/share/nginx/html:rw
-      # Папку зі звуками монтуємо окремо
       - ./sounds:/usr/share/nginx/html/sounds:ro

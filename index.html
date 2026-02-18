@@ -12,7 +12,14 @@
             background-color: #f0f9ff;
             user-select: none;
             margin: 0;
+            padding: 0;
             -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+        }
+        #root {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         @keyframes pop-in {
             0% { transform: scale(0.3); opacity: 0; }
@@ -23,20 +30,14 @@
             display: inline-block;
             animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
-        /* Додаткові стилі для виправлення можливих проблем верстки */
-        #root {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
     </style>
 <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@^19.2.4",
-    "react/": "https://esm.sh/react@^19.2.4/",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
     "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
+    "react/": "https://esm.sh/react@^19.2.4/",
     "vite": "https://esm.sh/vite@^7.3.1",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.4"
   }
