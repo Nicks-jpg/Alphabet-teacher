@@ -147,9 +147,21 @@ const speakGemini = async (char: string, pronunciation: string, apiKey: string) 
       },
     });
 
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    // Логуємо повну структуру відповіді для дебагу
+    console.log("[TTS] Full Gemini Response:", JSON.stringify(response, null, 2));
+
+    // Перевіряємо, чи є відповідь всередині об'єкта (для деяких версій SDK)
+    const actualResponse = (response as any).response || response;
+
+    const candidate = actualResponse.candidates?.[0];
+    const part = candidate?.content?.parts?.[0];
+    const base64Audio = part?.inlineData?.data;
+
     if (!base64Audio) {
-      console.warn("[TTS] Gemini повернув порожню відповідь (немає аудіо)");
+      console.warn("[TTS] Gemini повернув порожню відповідь (немає аудіо). Структура:", actualResponse);
+      if (part?.text) {
+        console.warn("[TTS] Отримано текст замість аудіо:", part.text);
+      }
       return;
     }
 
