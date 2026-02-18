@@ -10,5 +10,7 @@ services:
     environment:
       - API_KEY=${API_KEY}
     volumes:
-      - ./dist:/usr/share/nginx/html:ro
+      # Змінюємо :ro на :rw для основного шляху, щоб Docker міг створити підпапку sounds
+      - ./dist:/usr/share/nginx/html:rw
+      # Папку зі звуками монтуємо окремо
       - ./sounds:/usr/share/nginx/html/sounds:ro
