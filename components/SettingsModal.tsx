@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AppSettings, TTSProvider } from '../types';
 import { getSettings, saveSettings } from '../services/speechService';
@@ -9,18 +8,51 @@ export const SettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
   const handleSave = () => {
     saveSettings(settings);
     onClose();
-    window.location.reload(); // Refresh to apply new keys/providers
+    window.location.reload(); 
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl p-6 md:p-8">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-bold text-gray-800">Налаштування API</h2>
+          <h2 className="text-3xl font-bold text-gray-800">Налаштування</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">✕</button>
         </div>
 
         <div className="space-y-6">
+          {/* Priority Letters Setting */}
+          <div className="bg-red-50 p-4 rounded-2xl">
+            <label className="block text-sm font-bold text-red-600 mb-2 uppercase tracking-wider">Пріоритетні букви (складні)</label>
+            <input 
+              type="text"
+              value={settings.priorityLetters}
+              onChange={(e) => setSettings({...settings, priorityLetters: e.target.value})}
+              placeholder="Наприклад: Б, В, Ч, Ц"
+              className="w-full p-3 rounded-xl border-2 border-red-100 focus:border-red-400 outline-none font-bold text-lg"
+            />
+            <p className="text-xs text-red-400 mt-2">Вкажіть букви через кому. Вони будуть з'являтися в 4 рази частіше за інші.</p>
+          </div>
+
+          {/* Session Length Setting */}
+          <div className="bg-orange-50 p-4 rounded-2xl">
+            <label className="block text-sm font-bold text-orange-600 mb-2 uppercase tracking-wider">Тривалість заняття</label>
+            <div className="flex items-center gap-4">
+              <input 
+                type="range" 
+                min="5" 
+                max="100" 
+                step="5"
+                value={settings.sessionLimit}
+                onChange={(e) => setSettings({...settings, sessionLimit: parseInt(e.target.value)})}
+                className="flex-1 h-2 bg-orange-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
+              />
+              <span className="text-2xl font-bold text-orange-600 w-12 text-center">
+                {settings.sessionLimit}
+              </span>
+            </div>
+            <p className="text-xs text-orange-400 mt-2">Кількість літер, які дитина має назвати за один сеанс.</p>
+          </div>
+
           {/* Provider Selection */}
           <div className="bg-blue-50 p-4 rounded-2xl">
             <label className="block text-sm font-bold text-blue-600 mb-2 uppercase tracking-wider">Провайдер Озвучки (TTS)</label>
@@ -55,66 +87,18 @@ export const SettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
                   type="text"
                   value={settings.customBaseUrl}
                   onChange={(e) => setSettings({...settings, customBaseUrl: e.target.value})}
-                  placeholder="http://localhost:11434/v1"
                   className="w-full p-3 rounded-xl border-2 border-gray-100 focus:border-blue-400 outline-none"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-600 mb-1">Model Name</label>
-                  <input 
-                    type="text"
-                    value={settings.customModel}
-                    onChange={(e) => setSettings({...settings, customModel: e.target.value})}
-                    placeholder="tts-1"
-                    className="w-full p-3 rounded-xl border-2 border-gray-100 focus:border-blue-400 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-600 mb-1">API Key (якщо треба)</label>
-                  <input 
-                    type="password"
-                    value={settings.customApiKey}
-                    onChange={(e) => setSettings({...settings, customApiKey: e.target.value})}
-                    className="w-full p-3 rounded-xl border-2 border-gray-100 focus:border-blue-400 outline-none"
-                  />
-                </div>
-              </div>
             </div>
           )}
-
-          {/* Manual Section */}
-          <div className="mt-8 border-t pt-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">📖 Інструкція підключення</h3>
-            <div className="space-y-4 text-sm text-gray-600">
-              <section className="bg-gray-50 p-4 rounded-xl border-l-4 border-blue-400">
-                <p className="font-bold text-blue-700 mb-1">Google Gemini (Хмарний варіант):</p>
-                <p>1. Отримайте ключ на <a href="https://aistudio.google.com/" target="_blank" className="underline">Google AI Studio</a>.</p>
-                <p>2. Вставте ключ у поле Gemini API Key. Це забезпечить найкращу українську вимову.</p>
-              </section>
-
-              <section className="bg-gray-50 p-4 rounded-xl border-l-4 border-orange-400">
-                <p className="font-bold text-orange-700 mb-1">Ollama (Локально):</p>
-                <p>1. Встановіть Ollama. Запустіть її з дозволом CORS: <code className="bg-gray-200 px-1">OLLAMA_ORIGINS="*" ollama serve</code>.</p>
-                <p>2. Використовуйте URL: <code className="bg-gray-200 px-1">http://localhost:11434/v1</code>.</p>
-                <p>3. *Зауважте: Ollama нативно не має TTS, вам знадобиться сумісний проксі або спеціальна модель озвучки.</p>
-              </section>
-
-              <section className="bg-gray-50 p-4 rounded-xl border-l-4 border-purple-400">
-                <p className="font-bold text-purple-700 mb-1">LM Studio:</p>
-                <p>1. У вкладці "Local Server" запустіть сервер.</p>
-                <p>2. Увімкніть "CORS" у налаштуваннях LM Studio.</p>
-                <p>3. URL: <code className="bg-gray-200 px-1">http://localhost:1234/v1</code>.</p>
-              </section>
-            </div>
-          </div>
 
           <div className="flex gap-4 pt-4">
             <button 
               onClick={handleSave}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg transition-colors"
             >
-              Зберегти та оновити
+              Зберегти
             </button>
             <button 
               onClick={onClose}

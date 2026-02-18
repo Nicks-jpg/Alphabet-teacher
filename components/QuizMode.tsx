@@ -1,44 +1,80 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { UKRAINIAN_ALPHABET } from '../constants';
-import { speakUkrainian, unlockAudio } from '../services/speechService';
+import { speakUkrainian, unlockAudio, getSettings } from '../services/speechService';
 
 export const QuizMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+  const settings = useMemo(() => getSettings(), []);
+  
+  // Генеруємо чергу відповідно до ліміту та пріоритетів
+  const quizQueue = useMemo(() => {
+    const limit = settings.sessionLimit || 33;
+    const priorities = (settings.priorityLetters || '')
+      .split(',')
+      .map(s => s.trim().toUpperCase())
+      .filter(s => s.length > 0);
+
+    let pool = [...UKRAINIAN_ALPHABET];
+    const priorityItems = UKRAINIAN_ALPHABET.filter(l => priorities.includes(l.char));
+    
+    // Додаємо додаткові копії пріоритетних букв (4x вага)
+    for (let i = 0; i < 3; i++) {
+      pool = [...pool, ...priorityItems];
+    }
+
+    let result = [];
+    while (result.length < limit) {
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+      result = [...result, ...shuffled];
+    }
+    return result.slice(0, limit);
+  }, [settings.sessionLimit, settings.priorityLetters]);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [targetChar, setTargetChar] = useState<string>('');
   const [targetPron, setTargetPron] = useState<string>('');
   const [options, setOptions] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState(0);
 
-  const generateQuiz = useCallback(async () => {
+  const generateQuiz = useCallback(async (index: number) => {
+    if (index >= quizQueue.length) return;
+    
     await unlockAudio();
-    const randomIdx = Math.floor(Math.random() * UKRAINIAN_ALPHABET.length);
-    const letter = UKRAINIAN_ALPHABET[randomIdx];
+    const letter = quizQueue[index];
     
     const others = UKRAINIAN_ALPHABET
       .filter(l => l.char !== letter.char)
       .sort(() => Math.random() - 0.5)
-      .slice(0, 4)
+      .slice(0, 5)
       .map(l => l.char);
     
     setTargetChar(letter.char);
     setTargetPron(letter.pronunciation);
-    setOptions([...others, letter.char].sort(() => Math.random() - 0.5));
+    
+    const allOptions = [...others.slice(0, 5), letter.char].sort(() => Math.random() - 0.5);
+    setOptions(allOptions);
     setSelected(null);
     
-    // Озвучуємо ціль
     speakUkrainian(letter.char, letter.pronunciation);
-  }, []);
+  }, [quizQueue]);
 
   useEffect(() => {
-    generateQuiz();
-  }, [generateQuiz]);
+    generateQuiz(currentIndex);
+  }, [currentIndex, generateQuiz]);
 
   const handleSelect = (choice: string) => {
     if (selected) return;
     setSelected(choice);
     if (choice === targetChar) {
       setScore(s => s + 1);
+    }
+  };
+
+  const nextQuestion = () => {
+    if (currentIndex < quizQueue.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    } else {
+      onBack();
     }
   };
 
@@ -56,8 +92,13 @@ export const QuizMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         >
           Назад
         </button>
-        <div className="text-xl font-bold text-purple-600">
-          Рахунок: {score}
+        <div className="flex flex-col items-end">
+          <div className="text-xl font-bold text-purple-600">
+            Рахунок: {score}
+          </div>
+          <div className="text-xs text-gray-400">
+            Буква {currentIndex + 1} з {quizQueue.length}
+          </div>
         </div>
       </div>
 
@@ -93,10 +134,10 @@ export const QuizMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
       {selected && (
         <button
-          onClick={generateQuiz}
+          onClick={nextQuestion}
           className="mt-8 bg-purple-500 hover:bg-purple-600 text-white text-xl px-12 py-4 rounded-2xl font-bold shadow-lg animate-bounce"
         >
-          Далі ➔
+          {currentIndex < quizQueue.length - 1 ? 'Далі ➔' : 'Завершити 🏁'}
         </button>
       )}
     </div>

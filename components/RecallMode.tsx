@@ -1,28 +1,52 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { UKRAINIAN_ALPHABET } from '../constants';
 import { LetterCard } from './LetterCard';
-import { speakUkrainian, unlockAudio } from '../services/speechService';
+import { speakUkrainian, unlockAudio, getSettings } from '../services/speechService';
 
 export const RecallMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+  const settings = useMemo(() => getSettings(), []);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(7);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  const letters = React.useMemo(() => {
-    const difficult = UKRAINIAN_ALPHABET.filter(l => l.isDifficult);
-    const regular = UKRAINIAN_ALPHABET.filter(l => !l.isDifficult).sort(() => Math.random() - 0.5);
-    return [...difficult, ...regular];
-  }, []);
+  // Генеруємо чергу відповідно до ліміту та пріоритетів
+  const letters = useMemo(() => {
+    const limit = settings.sessionLimit || 33;
+    const priorities = (settings.priorityLetters || '')
+      .split(',')
+      .map(s => s.trim().toUpperCase())
+      .filter(s => s.length > 0);
+
+    // Створюємо "кошик" літер
+    // Пріоритетні додаємо по 4 рази, інші по одному
+    let pool = [...UKRAINIAN_ALPHABET];
+    const priorityItems = UKRAINIAN_ALPHABET.filter(l => priorities.includes(l.char));
+    
+    // Додаємо додаткові копії пріоритетних букв
+    for (let i = 0; i < 3; i++) {
+      pool = [...pool, ...priorityItems];
+    }
+
+    let result = [];
+    while (result.length < limit) {
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+      result = [...result, ...shuffled];
+    }
+    return result.slice(0, limit);
+  }, [settings.sessionLimit, settings.priorityLetters]);
 
   const currentLetter = letters[currentIdx];
 
   const handleNext = useCallback(async () => {
     await unlockAudio();
-    setCurrentIdx(prev => (prev + 1) % letters.length);
-    setTimeLeft(7);
-    setIsSpeaking(false);
-  }, [letters.length]);
+    if (currentIdx < letters.length - 1) {
+      setCurrentIdx(prev => prev + 1);
+      setTimeLeft(7);
+      setIsSpeaking(false);
+    } else {
+      onBack(); 
+    }
+  }, [currentIdx, letters.length, onBack]);
 
   const handleManualSpeak = async () => {
     await unlockAudio();
@@ -67,7 +91,6 @@ export const RecallMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           <button 
             onClick={handleManualSpeak}
             className="absolute -top-4 -right-4 bg-green-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg border-4 border-white animate-bounce hover:scale-110 transition-transform cursor-pointer"
-            title="Натисніть щоб почути ще раз"
           >
             🔊
           </button>
@@ -76,7 +99,7 @@ export const RecallMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
       <div className="text-center space-y-4">
         <h2 className="text-2xl font-bold text-gray-700">Назви букву вголос!</h2>
-        <p className="text-gray-500 max-w-xs">
+        <p className="text-gray-500 max-w-xs h-8">
           {timeLeft > 0 
             ? `Підказка з'явиться через ${timeLeft} сек...` 
             : `Це буква "${currentLetter.char}" (${currentLetter.pronunciation})`}
@@ -87,7 +110,7 @@ export const RecallMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         onClick={handleNext}
         className="bg-green-500 hover:bg-green-600 text-white text-2xl px-12 py-4 rounded-2xl font-bold shadow-lg transform active:scale-95 transition-all"
       >
-        Наступна буква ➔
+        {currentIdx < letters.length - 1 ? 'Наступна буква ➔' : 'Завершити 🏁'}
       </button>
     </div>
   );

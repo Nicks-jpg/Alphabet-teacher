@@ -1,4 +1,3 @@
-
 export enum AppMode {
   MENU = 'MENU',
   LEARN = 'LEARN',
@@ -21,6 +20,8 @@ export interface AppSettings {
   customBaseUrl: string;
   customApiKey: string;
   customModel: string;
+  sessionLimit: number;
+  priorityLetters: string;
 }
 
 export interface QuizState {
