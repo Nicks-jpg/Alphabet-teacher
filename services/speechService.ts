@@ -132,7 +132,7 @@ const speakGemini = async (char: string, pronunciation: string, apiKey: string) 
     const ai = new GoogleGenAI({ apiKey: effectiveKey });
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text: `Вимови чітко українську літеру "${char}". Тільки звук.` }] }],
+      contents: [{ parts: [{ text: pronunciation || char }] }],
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: {
