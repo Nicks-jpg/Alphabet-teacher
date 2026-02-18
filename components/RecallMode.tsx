@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { UKRAINIAN_ALPHABET } from '../constants';
+import { UKRAINIAN_ALPHABET, ExtendedLetter } from '../constants';
 import { LetterCard } from './LetterCard';
 import { speakUkrainian, unlockAudio, getSettings } from '../services/speechService';
 
@@ -16,11 +16,11 @@ export const RecallMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
       .map(s => s.trim().toUpperCase())
       .filter(s => s.length > 0);
 
-    let pool = [...UKRAINIAN_ALPHABET];
+    let pool: ExtendedLetter[] = [...UKRAINIAN_ALPHABET];
     const priorityItems = UKRAINIAN_ALPHABET.filter(l => priorities.includes(l.char));
     for (let i = 0; i < 3; i++) pool = [...pool, ...priorityItems];
 
-    let result = [];
+    let result: ExtendedLetter[] = [];
     while (result.length < limit) {
       const shuffled = [...pool].sort(() => Math.random() - 0.5);
       result = [...result, ...shuffled];

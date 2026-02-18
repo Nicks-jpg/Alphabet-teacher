@@ -6,6 +6,9 @@ const audioCache = new Map<string, AudioBuffer>();
 
 // Отримуємо ключ через змінні Vite
 const getEnvKey = () => {
+  if ((window as any)._env_ && (window as any)._env_.API_KEY) {
+    return (window as any)._env_.API_KEY;
+  }
   return (import.meta as any).env.VITE_API_KEY || '';
 };
 
