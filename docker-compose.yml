@@ -2,14 +2,16 @@ version: '3.8'
 
 services:
   abc-helper:
-    image: nginx:alpine
+    build: 
+      context: .
+      args:
+        - API_KEY=${API_KEY}
     container_name: abc-helper-app
     restart: always
     ports:
       - "7890:80"
     environment:
-      - API_KEY=${API_KEY}
+      - VITE_API_KEY=${API_KEY}
     volumes:
-      # rw (read-write) необхідний, щоб Docker міг створити папку sounds/ всередині як точку монтування
-      - ./dist:/usr/share/nginx/html:rw
+      # Монтуємо папку зі звуками, щоб можна було додавати нові без перезбірки
       - ./sounds:/usr/share/nginx/html/sounds:ro

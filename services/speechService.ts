@@ -4,9 +4,14 @@ import { AppSettings, TTSProvider } from "../types";
 let sharedAudioContext: AudioContext | null = null;
 const audioCache = new Map<string, AudioBuffer>();
 
+// Отримуємо ключ через змінні Vite
+const getEnvKey = () => {
+  return (import.meta as any).env.VITE_API_KEY || '';
+};
+
 const DEFAULT_SETTINGS: AppSettings = {
   ttsProvider: TTSProvider.GEMINI,
-  geminiApiKey: process.env.API_KEY || '',
+  geminiApiKey: getEnvKey(),
   customBaseUrl: 'http://localhost:11434/v1',
   customApiKey: '',
   customModel: 'whisper',
@@ -18,7 +23,8 @@ export const getSettings = (): AppSettings => {
   const saved = localStorage.getItem('alphabet_settings');
   if (!saved) return DEFAULT_SETTINGS;
   try {
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+    const parsed = JSON.parse(saved);
+    return { ...DEFAULT_SETTINGS, ...parsed, geminiApiKey: parsed.geminiApiKey || getEnvKey() };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -112,8 +118,13 @@ const speakGemini = async (char: string, pronunciation: string, apiKey: string) 
     playBuffer(localBuffer);
     return;
   }
-  const effectiveKey = apiKey || process.env.API_KEY;
-  if (!effectiveKey) return;
+  
+  const effectiveKey = apiKey || getEnvKey();
+  if (!effectiveKey) {
+    console.warn("No API Key available for Gemini TTS");
+    return;
+  }
+
   try {
     const ai = new GoogleGenAI({ apiKey: effectiveKey });
     const response = await ai.models.generateContent({
@@ -149,7 +160,7 @@ export const speakUkrainian = async (char: string, pronunciation: string) => {
 
 export const checkDrawing = async (base64Image: string, targetLetter: string): Promise<boolean> => {
   const settings = getSettings();
-  const apiKey = settings.geminiApiKey || process.env.API_KEY;
+  const apiKey = settings.geminiApiKey || getEnvKey();
   if (!apiKey) return false;
 
   try {
