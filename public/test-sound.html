@@ -18,7 +18,7 @@
 </head>
 <body>
     <h1>🔊 Advanced Sound Debugger</h1>
-    
+
     <div class="controls">
         <label>
             Text to speak:
@@ -47,7 +47,7 @@
         <label>
             <input type="checkbox" id="useSpeechConfig" checked> Send Speech Config
         </label>
-        
+
         <label>
             <input type="checkbox" id="useResponseModalities" checked> Send responseModalities: ["AUDIO"]
         </label>
@@ -66,10 +66,6 @@
 
         const logDiv = document.getElementById('log');
         const statusDiv = document.getElementById('status');
-        
-        window.clearLog = () => {
-            logDiv.innerText = '';
-        };
 
         window.clearLog = () => {
             logDiv.innerText = '';
@@ -100,7 +96,7 @@
                 log(`API Key: ${apiKey.substring(0, 5)}...`);
 
                 const ai = new GoogleGenAI({ apiKey });
-                
+
                 const config = {};
                 if (useResponseModalities) {
                     config.responseModalities = ["AUDIO"];
