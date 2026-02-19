@@ -19,7 +19,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   customApiKey: '',
   customModel: 'whisper',
   sessionLimit: 33,
-  priorityLetters: 'Б, В, Ч, Ц, Н, М, Ш, Й'
+  priorityLetters: 'Б, В, Ч, Ц, Н, М, Ш, Й',
+  confusingPairs: 'Б-В, Ч-Ц, Н-М, Ш-Щ, Й-И' // Значення за замовчуванням
 };
 
 export const getSettings = (): AppSettings => {
@@ -142,7 +143,7 @@ export const checkDrawing = async (base64Image: string, targetLetter: string): P
         {
           parts: [
             { inlineData: { mimeType: "image/png", data: base64Image.split(',')[1] } },
-            { text: `Це дитячий малюнок. Чи схоже це на українську літеру "${targetLetter}"? Відповідай TRUE або FALSE.` }
+            { text: `Це дитячий малюнок. Чи схоже це на українську літеру "${targetLetter}"? Будь поблажливим, це малює дитина. Якщо малюнок хоча б віддалено нагадує літеру, відповідай TRUE. Інакше FALSE.` }
           ]
         }
       ]

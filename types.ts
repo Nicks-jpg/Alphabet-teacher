@@ -30,6 +30,7 @@ export interface AppSettings {
   customModel: string;
   sessionLimit: number;
   priorityLetters: string;
+  confusingPairs: string; // Нове налаштування для пар (наприклад "Б-В, М-Н")
 }
 
 export interface QuizState {
