@@ -1,116 +1,157 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { UKRAINIAN_ALPHABET } from '../constants';
 import { LetterCard } from './LetterCard';
 import { speakUkrainian, unlockAudio, getSettings } from '../services/speechService';
+import { ExtendedLetter } from '../types';
 
 export const RecallMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const settings = useMemo(() => getSettings(), []);
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(7);
-  const [isSpeaking, setIsSpeaking] = useState(false);
 
-  const letters = useMemo(() => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isRevealed, setIsRevealed] = useState(false);
+  const [showResult, setShowResult] = useState(false);
+  const [timer, setTimer] = useState<number>(5); // Початкове значення таймера
+
+  // Формування черги запитань
+  const queue = useMemo(() => {
     const limit = settings.sessionLimit || 33;
-    const priorities = (settings.priorityLetters || '')
-      .split(',')
-      .map(s => s.trim().toUpperCase())
-      .filter(s => s.length > 0);
+    const priorities = (settings.priorityLetters || '').split(',').map(s => s.trim().toUpperCase()).filter(s => s.length > 0);
 
-    let pool = [...UKRAINIAN_ALPHABET];
+    // Створюємо пул з вищим пріоритетом для вибраних літер
+    let pool: ExtendedLetter[] = [...UKRAINIAN_ALPHABET];
     const priorityItems = UKRAINIAN_ALPHABET.filter(l => priorities.includes(l.char));
+    // Додаємо пріоритетні літери декілька разів, щоб збільшити ймовірність їх появи
     for (let i = 0; i < 3; i++) pool = [...pool, ...priorityItems];
 
-    let result = [];
-    while (result.length < limit) {
-      const shuffled = [...pool].sort(() => Math.random() - 0.5);
-      result = [...result, ...shuffled];
-    }
-    return result.slice(0, limit);
-  }, [settings.sessionLimit, settings.priorityLetters]);
+    // Перемішуємо і беремо ліміт
+    return pool.sort(() => Math.random() - 0.5).slice(0, limit);
+  }, [settings]);
 
-  const currentLetter = letters[currentIdx];
+  const currentItem = queue[currentIndex];
 
-  const handleNext = useCallback(async () => {
+  const playSound = useCallback(async () => {
     await unlockAudio();
-    if (currentIdx < letters.length - 1) {
-      setCurrentIdx(prev => prev + 1);
-      setTimeLeft(7);
-      setIsSpeaking(false);
+    if (currentItem) {
+      speakUkrainian(currentItem.char, currentItem.pronunciation);
+    }
+  }, [currentItem]);
+
+  // Таймер для автоматичного показу відповіді
+  useEffect(() => {
+    setIsRevealed(false);
+    setTimer(5); // Скидаємо таймер при зміні картки
+
+    const interval = setInterval(() => {
+      setTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          if (!isRevealed) {
+              setIsRevealed(true);
+              playSound();
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [currentIndex, playSound]); // Видалено isRevealed з залежностей, щоб уникнути зайвих ререндерів/циклів
+
+  const handleNext = () => {
+    if (currentIndex < queue.length - 1) {
+      setCurrentIndex(prev => prev + 1);
     } else {
-      onBack(); 
+      setShowResult(true);
     }
-  }, [currentIdx, letters.length, onBack]);
-
-  const handleManualSpeak = async () => {
-    await unlockAudio();
-    speakUkrainian(currentLetter.char, currentLetter.pronunciation);
   };
 
-  useEffect(() => {
-    let timer: number;
-    if (timeLeft > 0) {
-      timer = window.setInterval(() => {
-        setTimeLeft(prev => prev - 1);
-      }, 1000);
-    } else if (timeLeft === 0 && !isSpeaking) {
-      setIsSpeaking(true);
-      speakUkrainian(currentLetter.char, currentLetter.pronunciation);
-    }
-    return () => clearInterval(timer);
-  }, [timeLeft, currentLetter.char, currentLetter.pronunciation, isSpeaking]);
+  const handleReveal = () => {
+    setIsRevealed(true);
+    setTimer(0);
+    playSound();
+  };
 
-  return (
-    <div className="flex flex-col items-center justify-between min-h-screen p-6 bg-blue-50">
-      <div className="w-full max-w-2xl flex justify-between items-center bg-white/80 p-4 rounded-3xl shadow-sm">
-        <button 
-          onClick={onBack}
-          className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-2xl font-black transition-all active:scale-95"
-        >
-          ← Вийти
-        </button>
-        <div className="text-2xl font-black text-blue-600">
-          Буква {currentIdx + 1} з {letters.length}
+  if (showResult) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-yellow-50">
+        <div className="bg-white p-8 rounded-3xl shadow-xl text-center max-w-md w-full border-4 border-yellow-200">
+          <div className="text-6xl mb-6">🌟</div>
+          <h2 className="text-3xl font-bold text-yellow-600 mb-4">Молодець!</h2>
+          <p className="text-xl text-slate-600 mb-8">
+            Ти повторив {queue.length} букв!
+          </p>
+          <button
+            onClick={onBack}
+            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-8 rounded-2xl transition-all transform hover:scale-105 active:scale-95 shadow-lg"
+          >
+            Повернутися в меню 🏠
+          </button>
         </div>
       </div>
+    );
+  }
 
-      <div className="flex flex-col items-center gap-10">
-        <div className="relative">
-          <LetterCard letter={currentLetter.char} isDifficult={currentLetter.isDifficult} />
-          
-          {timeLeft > 0 ? (
-            <div className="absolute -top-6 -right-6 bg-blue-600 text-white w-16 h-16 rounded-full flex items-center justify-center text-2xl font-black border-4 border-white shadow-xl animate-pulse">
-              {timeLeft}
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-slate-50">
+      <div className="w-full max-w-md flex justify-between items-center mb-8">
+        <button onClick={onBack} className="bg-white border-2 border-slate-200 px-4 py-2 rounded-xl font-bold text-slate-600">Назад</button>
+        <div className="text-xl font-bold text-yellow-600">Вчимо букви 📚</div>
+        <div className="text-sm font-bold text-slate-400">{currentIndex + 1}/{queue.length}</div>
+      </div>
+
+      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md">
+        <div className="mb-8 relative">
+           <LetterCard
+             letter={currentItem.char}
+             size="lg"
+             isDifficult={currentItem.isDifficult}
+           />
+
+           {!isRevealed && timer > 0 && (
+             <div className="absolute -top-4 -right-4 w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center font-bold text-white text-xl shadow-lg animate-pulse">
+               {timer}
+             </div>
+           )}
+        </div>
+
+        <div className="h-32 flex flex-col items-center justify-center mb-8 text-center">
+          {isRevealed ? (
+            <div className="animate-fade-in">
+              <p className="text-4xl font-bold text-slate-700 mb-2">{currentItem.pronunciation}</p>
+              <p className="text-xl text-slate-500">"{currentItem.word}"</p>
             </div>
           ) : (
-            <button 
-              onClick={handleManualSpeak}
-              className="absolute -top-6 -right-6 bg-green-500 text-white w-20 h-20 rounded-full flex items-center justify-center shadow-xl border-4 border-white animate-bounce hover:scale-110 transition-all cursor-pointer text-3xl"
-            >
-              🔊
-            </button>
+            <p className="text-xl font-bold text-slate-400 animate-pulse">Назви букву...</p>
           )}
         </div>
 
-        <div className="text-center space-y-4 px-4">
-          <h2 className="text-4xl font-black text-gray-800 tracking-tight">Назви букву вголос!</h2>
-          <div className="h-12 flex items-center justify-center">
-            {timeLeft > 0 ? (
-              <p className="text-blue-400 font-bold text-lg">Підказка з'явиться за мить...</p>
-            ) : (
-              <p className="text-green-600 font-black text-2xl animate-pop-in">
-                Це буква "{currentLetter.char}"
-              </p>
-            )}
-          </div>
+        <div className="w-full flex flex-col gap-4">
+          {!isRevealed ? (
+            <button
+              onClick={handleReveal}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-5 rounded-2xl shadow-lg text-xl transition-all active:scale-95"
+            >
+              Перевірити (Показати) 👀
+            </button>
+          ) : (
+            <div className="flex gap-4 w-full">
+              <button
+                onClick={playSound}
+                className="flex-1 bg-blue-100 text-blue-600 font-bold py-5 rounded-2xl shadow-md text-xl hover:bg-blue-200 active:scale-95"
+              >
+                🔊 Ще раз
+              </button>
+              <button
+                onClick={handleNext}
+                className="flex-[2] bg-green-500 hover:bg-green-600 text-white font-bold py-5 rounded-2xl shadow-lg text-xl transition-all active:scale-95"
+              >
+                Наступна ➔
+              </button>
+            </div>
+          )}
         </div>
       </div>
-
-      <button 
-        onClick={handleNext}
-        className="w-full max-w-md bg-green-500 hover:bg-green-600 text-white text-3xl py-6 rounded-3xl font-black shadow-2xl border-b-8 border-green-700 transform active:translate-y-2 transition-all mb-4"
-      >
-        {currentIdx < letters.length - 1 ? 'ДАЛІ ➔' : 'ЗАВЕРШИТИ 🏁'}
-      </button>
     </div>
   );
 };

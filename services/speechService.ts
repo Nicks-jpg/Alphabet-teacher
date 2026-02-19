@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { AppSettings, TTSProvider } from "../types";
 
 let sharedAudioContext: AudioContext | null = null;
@@ -6,6 +6,9 @@ const audioCache = new Map<string, AudioBuffer>();
 
 // Отримуємо ключ через змінні Vite
 const getEnvKey = () => {
+  if ((window as any)._env_ && (window as any)._env_.API_KEY) {
+    return (window as any)._env_.API_KEY;
+  }
   return (import.meta as any).env.VITE_API_KEY || '';
 };
 
@@ -36,7 +39,8 @@ export const saveSettings = (settings: AppSettings) => {
 
 export const getAudioContext = () => {
   if (!sharedAudioContext) {
-    sharedAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+    // Не задаємо sampleRate при створенні контексту, щоб браузер вибрав найкращий
+    sharedAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
   }
   return sharedAudioContext;
 };
@@ -53,40 +57,6 @@ export const unlockAudio = async () => {
   source.start(0);
 };
 
-const decode = (base64: string) => {
-  try {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes;
-  } catch (e) {
-    console.error("Base64 decode error:", e);
-    return new Uint8Array(0);
-  }
-};
-
-const decodeAudioData = async (
-  data: Uint8Array,
-  ctx: AudioContext,
-  sampleRate: number,
-  numChannels: number,
-): Promise<AudioBuffer> => {
-  const dataInt16 = new Int16Array(data.buffer);
-  const frameCount = dataInt16.length / numChannels;
-  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-
-  for (let channel = 0; channel < numChannels; channel++) {
-    const channelData = buffer.getChannelData(channel);
-    for (let i = 0; i < frameCount; i++) {
-      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
-    }
-  }
-  return buffer;
-};
-
 const playBuffer = (buffer: AudioBuffer) => {
   const ctx = getAudioContext();
   const source = ctx.createBufferSource();
@@ -95,89 +65,95 @@ const playBuffer = (buffer: AudioBuffer) => {
   source.start();
 };
 
+const speakBrowser = (text: string) => {
+  try {
+    console.log(`[TTS] Fallback to Browser Speech for "${text}"`);
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'uk-UA';
+    window.speechSynthesis.speak(utterance);
+  } catch (e) {
+    console.error("Browser TTS Error:", e);
+  }
+};
+
 const tryLoadLocalMp3 = async (char: string): Promise<AudioBuffer | null> => {
   try {
     const ctx = getAudioContext();
-    const response = await fetch(`/sounds/${encodeURIComponent(char)}.mp3`);
-    if (!response.ok) return null;
+    // Файли мають бути названі як сама літера (наприклад, "А.mp3", "Б.mp3")
+    // encodeURIComponent забезпечує безпеку URL для кириличних символів
+    const url = `/sounds/${encodeURIComponent(char)}.mp3`;
+    console.log(`[TTS] Trying to load MP3: ${url}`);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+        console.warn(`[TTS] MP3 for "${char}" not found (HTTP ${response.status})`);
+        return null;
+    }
+
     const arrayBuffer = await response.arrayBuffer();
     return await ctx.decodeAudioData(arrayBuffer);
   } catch (e) {
+    console.error(`[TTS] Failed to load/decode MP3 for "${char}":`, e);
     return null;
   }
 };
 
-const speakGemini = async (char: string, pronunciation: string, apiKey: string) => {
+export const speakUkrainian = async (char: string, pronunciation: string) => {
+  const ctx = getAudioContext();
+  if (ctx.state === 'suspended') await ctx.resume();
+
+  // 1. Спочатку перевіряємо кеш
   if (audioCache.has(char)) {
+    console.log(`[TTS] Playing "${char}" from cache`);
     playBuffer(audioCache.get(char)!);
     return;
   }
+
+  // 2. Спроба завантажити MP3 з папки /sounds/
   const localBuffer = await tryLoadLocalMp3(char);
   if (localBuffer) {
+    console.log(`[TTS] Playing "${char}" from MP3 file`);
     audioCache.set(char, localBuffer);
     playBuffer(localBuffer);
     return;
   }
-  
-  const effectiveKey = apiKey || getEnvKey();
-  if (!effectiveKey) {
-    console.warn("No API Key available for Gemini TTS");
-    return;
-  }
 
-  try {
-    const ai = new GoogleGenAI({ apiKey: effectiveKey });
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text: `Вимови чітко українську літеру "${char}". Тільки звук.` }] }],
-      config: {
-        responseModalities: [Modality.AUDIO],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Kore' },
-          },
-        },
-      },
-    });
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    if (!base64Audio) return;
-    const ctx = getAudioContext();
-    const decodedBytes = decode(base64Audio);
-    const audioBuffer = await decodeAudioData(decodedBytes, ctx, 24000, 1);
-    audioCache.set(char, audioBuffer);
-    playBuffer(audioBuffer);
-  } catch (error: any) {
-    console.error("Gemini TTS Error:", error);
-  }
+  // 3. Фолбек на браузерний синтез (якщо файл не знайдено)
+  // Ми більше НЕ використовуємо Gemini API для генерації звуку, як запитано користувачем.
+  speakBrowser(pronunciation || char);
 };
 
-export const speakUkrainian = async (char: string, pronunciation: string) => {
-  const settings = getSettings();
-  const ctx = getAudioContext();
-  if (ctx.state === 'suspended') await ctx.resume();
-  await speakGemini(char, pronunciation, settings.geminiApiKey);
-};
-
+// Функція перевірки малюнка залишається на Gemini Vision API
 export const checkDrawing = async (base64Image: string, targetLetter: string): Promise<boolean> => {
   const settings = getSettings();
   const apiKey = settings.geminiApiKey || getEnvKey();
-  if (!apiKey) return false;
+
+  if (!apiKey) {
+      console.error("No API Key for Check Drawing!");
+      return false;
+  }
 
   try {
+    console.log(`[CheckDrawing] Verifying "${targetLetter}"...`);
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash-exp", // Використовуємо мультимодальну модель
       contents: [
         {
           parts: [
             { inlineData: { mimeType: "image/png", data: base64Image.split(',')[1] } },
-            { text: `Це малюнок дитини. Чи схоже це на українську літеру "${targetLetter}"? Відповідай TRUE або FALSE.` }
+            { text: `Це дитячий малюнок. Чи схоже це на українську літеру "${targetLetter}"? Відповідай TRUE або FALSE.` }
           ]
         }
       ]
     });
-    const text = response.text?.trim().toUpperCase();
-    return text?.includes("TRUE") || false;
+
+    const candidate = response.candidates?.[0];
+    const part = candidate?.content?.parts?.[0];
+    const text = part?.text?.trim().toUpperCase() || '';
+
+    console.log(`[CheckDrawing] Result: ${text}`);
+    return text.includes("TRUE");
   } catch (e) {
     console.error("AI Check Error:", e);
     return false;

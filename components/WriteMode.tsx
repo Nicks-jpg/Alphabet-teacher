@@ -6,7 +6,10 @@ import { LetterCard } from './LetterCard';
 export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const settings = useMemo(() => getSettings(), []);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
+
+  // Використовуємо ref для синхронного стану малювання
+  const isDrawingRef = useRef(false);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isChecking, setIsChecking] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -30,14 +33,10 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Клітинки як у зошиті
-    ctx.strokeStyle = '#f1f5f9';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let i = 50; i < canvas.width; i += 50) { ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); }
-    for (let i = 50; i < canvas.height; i += 50) { ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); }
-    ctx.stroke();
+    // Grid removed as per user request to "simply draw on white background"
+    // and to prevent the "thick grid" bug.
     
+    ctx.beginPath();
     setFeedback('idle');
     setShowAnswer(false);
   };
@@ -56,38 +55,58 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   }, [currentIndex, playSound]);
 
+  const getPos = (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const clientX = ('touches' in e) ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = ('touches' in e) ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top
+    };
+  };
+
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
     if (showAnswer || isChecking) return;
-    setIsDrawing(true);
-    draw(e);
-  };
+    isDrawingRef.current = true;
 
-  const stopDrawing = () => {
-    setIsDrawing(false);
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      ctx?.beginPath();
-    }
-  };
-
-  const draw = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing || showAnswer || isChecking) return;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
+    if (!ctx) return;
 
     ctx.lineWidth = 16;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.strokeStyle = '#334155';
 
-    const rect = canvas.getBoundingClientRect();
-    const x = ('touches' in e) ? e.touches[0].clientX - rect.left : (e as React.MouseEvent).clientX - rect.left;
-    const y = ('touches' in e) ? e.touches[0].clientY - rect.top : (e as React.MouseEvent).clientY - rect.top;
+    const { x, y } = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, y); // Draw dot
+    ctx.stroke();
+  };
 
+  const stopDrawing = () => {
+    isDrawingRef.current = false;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    ctx?.beginPath();
+  };
+
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawingRef.current || showAnswer || isChecking) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!ctx) return;
+
+    const { x, y } = getPos(e);
     ctx.lineTo(x, y);
     ctx.stroke();
+
+    // Для плавних ліній не робимо beginPath/moveTo на кожен крок,
+    // але якщо це потрібно для сумісності з попереднім кодом:
     ctx.beginPath();
     ctx.moveTo(x, y);
   };

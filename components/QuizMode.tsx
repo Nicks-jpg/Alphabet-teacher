@@ -1,145 +1,141 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { UKRAINIAN_ALPHABET } from '../constants';
-import { speakUkrainian, unlockAudio, getSettings } from '../services/speechService';
+import { LetterCard } from './LetterCard';
+import { getSettings } from '../services/speechService';
+import { ExtendedLetter } from '../types';
 
 export const QuizMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const settings = useMemo(() => getSettings(), []);
   
-  // Генеруємо чергу відповідно до ліміту та пріоритетів
-  const quizQueue = useMemo(() => {
-    const limit = settings.sessionLimit || 33;
-    const priorities = (settings.priorityLetters || '')
-      .split(',')
-      .map(s => s.trim().toUpperCase())
-      .filter(s => s.length > 0);
-
-    let pool = [...UKRAINIAN_ALPHABET];
-    const priorityItems = UKRAINIAN_ALPHABET.filter(l => priorities.includes(l.char));
-    
-    // Додаємо додаткові копії пріоритетних букв (4x вага)
-    for (let i = 0; i < 3; i++) {
-      pool = [...pool, ...priorityItems];
-    }
-
-    let result = [];
-    while (result.length < limit) {
-      const shuffled = [...pool].sort(() => Math.random() - 0.5);
-      result = [...result, ...shuffled];
-    }
-    return result.slice(0, limit);
-  }, [settings.sessionLimit, settings.priorityLetters]);
-
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [targetChar, setTargetChar] = useState<string>('');
-  const [targetPron, setTargetPron] = useState<string>('');
-  const [options, setOptions] = useState<string[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState(0);
+  const [showResult, setShowResult] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
-  const generateQuiz = useCallback(async (index: number) => {
-    if (index >= quizQueue.length) return;
+  const questions = useMemo(() => {
+    const limit = settings.sessionLimit || 33;
+    const priorities = (settings.priorityLetters || '').split(',').map(s => s.trim().toUpperCase()).filter(s => s.length > 0);
     
-    await unlockAudio();
-    const letter = quizQueue[index];
+    // Create pool with higher weight for priority letters
+    let pool: ExtendedLetter[] = [...UKRAINIAN_ALPHABET];
+    const priorityItems = UKRAINIAN_ALPHABET.filter(l => priorities.includes(l.char));
+    for (let i = 0; i < 3; i++) pool = [...pool, ...priorityItems];
     
-    const others = UKRAINIAN_ALPHABET
-      .filter(l => l.char !== letter.char)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 5)
-      .map(l => l.char);
+    // Shuffle and pick limit
+    pool = pool.sort(() => Math.random() - 0.5).slice(0, limit);
     
-    setTargetChar(letter.char);
-    setTargetPron(letter.pronunciation);
-    
-    const allOptions = [...others.slice(0, 5), letter.char].sort(() => Math.random() - 0.5);
-    setOptions(allOptions);
-    setSelected(null);
-    
-    speakUkrainian(letter.char, letter.pronunciation);
-  }, [quizQueue]);
+    return pool.map((target) => {
+      const options = [target];
+      while (options.length < 3) {
+        const random = UKRAINIAN_ALPHABET[Math.floor(Math.random() * UKRAINIAN_ALPHABET.length)];
+        if (!options.find(o => o.char === random.char)) {
+          options.push(random);
+        }
+      }
+      return {
+        target,
+        options: options.sort(() => Math.random() - 0.5)
+      };
+    });
+  }, [settings]);
 
-  useEffect(() => {
-    generateQuiz(currentIndex);
-  }, [currentIndex, generateQuiz]);
-
-  const handleSelect = (choice: string) => {
-    if (selected) return;
-    setSelected(choice);
-    if (choice === targetChar) {
+  const handleAnswer = (answer: string) => {
+    if (selectedAnswer) return;
+    
+    setSelectedAnswer(answer);
+    const correct = answer === questions[currentQuestion].target.char;
+    setIsCorrect(correct);
+    
+    if (correct) {
       setScore(s => s + 1);
-    }
-  };
-
-  const nextQuestion = () => {
-    if (currentIndex < quizQueue.length - 1) {
-      setCurrentIndex(prev => prev + 1);
+      // Play success sound
     } else {
-      onBack();
+      // Play error sound
     }
+
+    setTimeout(() => {
+      if (currentQuestion < questions.length - 1) {
+        setCurrentQuestion(prev => prev + 1);
+        setSelectedAnswer(null);
+        setIsCorrect(null);
+      } else {
+        setShowResult(true);
+      }
+    }, 1500);
   };
 
-  const repeatSound = async () => {
-    await unlockAudio();
-    speakUkrainian(targetChar, targetPron);
-  };
+  if (showResult) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-purple-50">
+        <div className="bg-white p-8 rounded-3xl shadow-xl text-center max-w-md w-full border-4 border-purple-100">
+          <div className="text-6xl mb-6">🎉</div>
+          <h2 className="text-3xl font-bold text-purple-600 mb-4">Чудова робота!</h2>
+          <p className="text-xl text-slate-600 mb-8">
+            Ти знаєш {score} з {questions.length} букв!
+          </p>
+          <button
+            onClick={onBack}
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-8 rounded-2xl transition-all transform hover:scale-105 active:scale-95 shadow-lg"
+          >
+            Повернутися в меню 🏠
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const question = questions[currentQuestion];
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 space-y-8">
-      <div className="w-full max-w-md flex justify-between items-center px-4">
-        <button 
-          onClick={onBack}
-          className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-xl font-bold"
-        >
-          Назад
-        </button>
-        <div className="flex flex-col items-end">
-          <div className="text-xl font-bold text-purple-600">
-            Рахунок: {score}
-          </div>
-          <div className="text-xs text-gray-400">
-            Буква {currentIndex + 1} з {quizQueue.length}
-          </div>
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-slate-50">
+      <div className="w-full max-w-md flex justify-between items-center mb-8">
+        <button onClick={onBack} className="bg-white border-2 border-slate-200 px-4 py-2 rounded-xl font-bold text-slate-600">Назад</button>
+        <div className="text-xl font-bold text-purple-600">Вікторина 🎯</div>
+        <div className="text-sm font-bold text-slate-400">{currentQuestion + 1}/{questions.length}</div>
+      </div>
+
+      <div className="text-center mb-12">
+        <h2 className="text-3xl font-bold text-slate-700 mb-4">Знайди букву:</h2>
+        <div className="text-6xl font-black text-purple-600 bg-white w-32 h-32 flex items-center justify-center rounded-3xl shadow-xl mx-auto border-4 border-purple-100 transform hover:scale-105 transition-transform">
+          {question.target.char}
         </div>
       </div>
 
-      <div className="text-center space-y-4">
-        <h2 className="text-3xl font-bold text-gray-800">Яку букву ти чуєш?</h2>
-        <button 
-          onClick={repeatSound}
-          className="bg-blue-100 hover:bg-blue-200 text-blue-600 p-6 rounded-full transition-colors text-4xl shadow-inner active:scale-95"
-        >
-          📢 Повторити
-        </button>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4 max-w-sm">
-        {options.map((opt) => (
+      <div className="grid grid-cols-1 gap-4 w-full max-w-md">
+        {question.options.map((option) => (
           <button
-            key={opt}
-            onClick={() => handleSelect(opt)}
-            disabled={!!selected}
+            key={option.char}
+            onClick={() => handleAnswer(option.char)}
+            disabled={selectedAnswer !== null}
             className={`
-              w-24 h-24 rounded-2xl text-4xl font-bold flex items-center justify-center shadow-md transition-all transform
-              ${!selected ? 'bg-white hover:scale-105 border-b-4 border-gray-300' : ''}
-              ${selected === opt && opt === targetChar ? 'bg-green-500 text-white scale-110' : ''}
-              ${selected === opt && opt !== targetChar ? 'bg-red-500 text-white opacity-50' : ''}
-              ${selected && opt === targetChar ? 'bg-green-500 text-white ring-4 ring-green-200' : ''}
-              ${selected && opt !== targetChar && selected !== opt ? 'bg-white opacity-50' : ''}
+              p-6 rounded-2xl text-2xl font-bold flex items-center justify-between shadow-md transition-all transform active:scale-95
+              ${selectedAnswer === null
+                ? 'bg-white hover:bg-purple-50 text-slate-700 border-2 border-slate-100'
+                : selectedAnswer === option.char
+                  ? isCorrect
+                    ? 'bg-green-100 border-2 border-green-500 text-green-700'
+                    : 'bg-red-100 border-2 border-red-500 text-red-700'
+                  : option.char === question.target.char
+                    ? 'bg-green-100 border-2 border-green-500 text-green-700'
+                    : 'opacity-50 bg-slate-50'
+              }
             `}
           >
-            {opt}
+            <div className="flex items-center gap-4">
+              <img
+                src={option.image}
+                alt={option.word}
+                className="w-16 h-16 object-cover rounded-xl"
+              />
+              <span className="capitalize">{option.word}</span>
+            </div>
+            {selectedAnswer === option.char && (
+              <span className="text-3xl">{isCorrect ? '✅' : '❌'}</span>
+            )}
           </button>
         ))}
       </div>
-
-      {selected && (
-        <button
-          onClick={nextQuestion}
-          className="mt-8 bg-purple-500 hover:bg-purple-600 text-white text-xl px-12 py-4 rounded-2xl font-bold shadow-lg animate-bounce"
-        >
-          {currentIndex < quizQueue.length - 1 ? 'Далі ➔' : 'Завершити 🏁'}
-        </button>
-      )}
     </div>
   );
 };
