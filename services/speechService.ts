@@ -20,7 +20,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   customModel: 'whisper',
   sessionLimit: 33,
   priorityLetters: 'Б, В, Ч, Ц, Н, М, Ш, Й',
-  confusingPairs: 'Б-В, Ч-Ц, Н-М, Ш-Щ, Й-И' // Значення за замовчуванням
+  confusingPairs: 'Б-В, Ч-Ц, Н-М, Ш-Щ, Й-И',
+  showLetterVisualHint: true
 };
 
 export const getSettings = (): AppSettings => {
@@ -80,8 +81,6 @@ const speakBrowser = (text: string) => {
 const tryLoadLocalMp3 = async (char: string): Promise<AudioBuffer | null> => {
   try {
     const ctx = getAudioContext();
-    // Файли мають бути названі як сама літера (наприклад, "А.mp3", "Б.mp3")
-    // encodeURIComponent забезпечує безпеку URL для кириличних символів
     const url = `/sounds/${encodeURIComponent(char)}.mp3`;
     console.log(`[TTS] Trying to load MP3: ${url}`);
 
@@ -103,14 +102,12 @@ export const speakUkrainian = async (char: string, pronunciation: string) => {
   const ctx = getAudioContext();
   if (ctx.state === 'suspended') await ctx.resume();
 
-  // 1. Спочатку перевіряємо кеш
   if (audioCache.has(char)) {
     console.log(`[TTS] Playing "${char}" from cache`);
     playBuffer(audioCache.get(char)!);
     return;
   }
 
-  // 2. Спроба завантажити MP3 з папки /sounds/
   const localBuffer = await tryLoadLocalMp3(char);
   if (localBuffer) {
     console.log(`[TTS] Playing "${char}" from MP3 file`);
@@ -119,12 +116,10 @@ export const speakUkrainian = async (char: string, pronunciation: string) => {
     return;
   }
 
-  // 3. Фолбек на браузерний синтез (якщо файл не знайдено)
-  // Ми більше НЕ використовуємо Gemini API для генерації звуку, як запитано користувачем.
   speakBrowser(pronunciation || char);
 };
 
-// Функція перевірки малюнка залишається на Gemini Vision API
+// Функція перевірки малюнка Gemini Vision API
 export const checkDrawing = async (base64Image: string, targetLetter: string): Promise<boolean> => {
   const settings = getSettings();
   const apiKey = settings.geminiApiKey || getEnvKey();
@@ -135,15 +130,15 @@ export const checkDrawing = async (base64Image: string, targetLetter: string): P
   }
 
   try {
-    console.log(`[CheckDrawing] Verifying "${targetLetter}"...`);
+    console.log(`[CheckDrawing] Verifying "${targetLetter}" with gemini-flash-lite-latest...`);
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-exp", // Використовуємо мультимодальну модель
+      model: "gemini-flash-lite-latest", // Оновлено модель
       contents: [
         {
           parts: [
             { inlineData: { mimeType: "image/png", data: base64Image.split(',')[1] } },
-            { text: `Це дитячий малюнок. Чи схоже це на українську літеру "${targetLetter}"? Будь поблажливим, це малює дитина. Якщо малюнок хоча б віддалено нагадує літеру, відповідай TRUE. Інакше FALSE.` }
+            { text: `Ти - вчитель початкових класів. Це малюнок дитини. Чи схоже це на українську літеру "${targetLetter}"? Будь поблажливим до кривих ліній. Відповідай ТІЛЬКИ словом TRUE або FALSE.` }
           ]
         }
       ]

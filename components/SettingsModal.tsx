@@ -20,6 +20,23 @@ export const SettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
         </div>
 
         <div className="space-y-6">
+          {/* Visual Hint Toggle */}
+          <div className="bg-purple-50 p-4 rounded-2xl flex items-center justify-between">
+            <div>
+                <label className="block text-sm font-bold text-purple-600 uppercase tracking-wider">Підказка літери (Напиши букву)</label>
+                <p className="text-xs text-purple-400 mt-1">Показувати літеру, яку треба написати, візуально.</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                    type="checkbox"
+                    checked={settings.showLetterVisualHint}
+                    onChange={(e) => setSettings({...settings, showLetterVisualHint: e.target.checked})}
+                    className="sr-only peer"
+                />
+                <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+
           {/* Priority Letters Setting */}
           <div className="bg-red-50 p-4 rounded-2xl">
             <label className="block text-sm font-bold text-red-600 mb-2 uppercase tracking-wider">Пріоритетні букви (складні)</label>
@@ -34,17 +51,17 @@ export const SettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
           </div>
 
           {/* Confusing Pairs Setting */}
-          <div className="bg-purple-50 p-4 rounded-2xl">
-            <label className="block text-sm font-bold text-purple-600 mb-2 uppercase tracking-wider">Сплутані пари (для тесту)</label>
+          <div className="bg-indigo-50 p-4 rounded-2xl">
+            <label className="block text-sm font-bold text-indigo-600 mb-2 uppercase tracking-wider">Сплутані пари (для тесту)</label>
             <input
               type="text"
               value={settings.confusingPairs}
               onChange={(e) => setSettings({...settings, confusingPairs: e.target.value})}
               placeholder="Наприклад: Б-В, М-Н, Ш-Щ"
-              className="w-full p-3 rounded-xl border-2 border-purple-100 focus:border-purple-400 outline-none font-bold text-lg"
+              className="w-full p-3 rounded-xl border-2 border-indigo-100 focus:border-indigo-400 outline-none font-bold text-lg"
             />
-            <p className="text-xs text-purple-400 mt-2">
-              Вкажіть пари букв через дефіс (Б-В). Якщо у тесті правильна відповідь "Б", то серед варіантів обов'язково буде "В", щоб заплутати.
+            <p className="text-xs text-indigo-400 mt-2">
+              Вкажіть пари букв через дефіс (Б-В). Якщо у тесті правильна відповідь "Б", то серед варіантів обов'язково буде "В".
             </p>
           </div>
 
