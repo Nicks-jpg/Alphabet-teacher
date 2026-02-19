@@ -133,12 +133,12 @@ export const checkDrawing = async (base64Image: string, targetLetter: string): P
     console.log(`[CheckDrawing] Verifying "${targetLetter}" with gemini-flash-lite-latest...`);
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: "gemini-flash-lite-latest", // Оновлено модель
+      model: "gemini-flash-lite-latest",
       contents: [
         {
           parts: [
             { inlineData: { mimeType: "image/png", data: base64Image.split(',')[1] } },
-            { text: `Ти - вчитель початкових класів. Це малюнок дитини. Чи схоже це на українську літеру "${targetLetter}"? Будь поблажливим до кривих ліній. Відповідай ТІЛЬКИ словом TRUE або FALSE.` }
+            { text: `Ти - вчитель початкових класів. Це малюнок дитини. Чи схоже це на українську літеру "${targetLetter}"? Ігноруй розриви в лініях, тремтіння та випадкові штрихи. Звертай увагу лише на загальну топологію та форму. Якщо це хоч трохи нагадує літеру, відповідай ТІЛЬКИ словом TRUE. Інакше FALSE.` }
           ]
         }
       ]

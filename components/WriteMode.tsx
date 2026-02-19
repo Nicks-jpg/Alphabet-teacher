@@ -36,22 +36,9 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Малюємо ледь помітну сітку (#f1f5f9)
-    ctx.beginPath();
-    ctx.strokeStyle = '#f1f5f9';
-    ctx.lineWidth = 1;
-    // Вертикальні лінії
-    for (let x = 50; x < canvas.width; x += 50) {
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvas.height);
-    }
-    // Горизонтальні лінії
-    for (let y = 50; y < canvas.height; y += 50) {
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-    }
-    ctx.stroke();
+    // JS Grid REMOVED - now handled by CSS
 
+    ctx.beginPath();
     setFeedback('idle');
     setShowAnswer(false);
   };
@@ -66,7 +53,6 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   useEffect(() => {
     if (currentLetter) {
       playSound();
-      // Невелика затримка, щоб DOM встиг оновитися перед малюванням сітки
       setTimeout(clearCanvas, 10);
     }
   }, [currentIndex, playSound]);
@@ -104,7 +90,7 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     ctx.lineWidth = 18;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#1e293b'; // Темно-синій колір для контрасту
+    ctx.strokeStyle = '#000000'; // Pure black for best AI contrast
 
     const { x, y } = getCoordinates(e);
     ctx.beginPath();
@@ -131,28 +117,53 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     ctx.lineTo(x, y);
     ctx.stroke();
 
-    // Для згладжування ліній
+    // For smoother lines
     ctx.beginPath();
     ctx.moveTo(x, y);
+  };
+
+  // Check if canvas has enough content
+  const isCanvasEmpty = (canvas: HTMLCanvasElement): boolean => {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return true;
+
+    const pixelBuffer = new Uint32Array(
+      ctx.getImageData(0, 0, canvas.width, canvas.height).data.buffer
+    );
+
+    // Count non-transparent pixels (since we clear rect, background is transparent 0x00000000)
+    // We look for pixels that are not 0.
+    let nonTransparentCount = 0;
+    for (let i = 0; i < pixelBuffer.length; i += 50) { // Check every 50th pixel for speed
+        if (pixelBuffer[i] !== 0) {
+            nonTransparentCount++;
+        }
+    }
+    return nonTransparentCount < 10; // If very few pixels drawn
   };
 
   const handleCheck = async () => {
     const canvas = canvasRef.current;
     if (!canvas || showAnswer) return;
     
+    if (isCanvasEmpty(canvas)) {
+        alert("Будь ласка, намалюй букву перед перевіркою!");
+        return;
+    }
+
     setIsChecking(true);
 
-    // Створюємо тимчасовий канвас з білим фоном для ШІ
+    // Create temp canvas with pure white background for AI
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = canvas.width;
     tempCanvas.height = canvas.height;
     const tempCtx = tempCanvas.getContext('2d');
 
     if (tempCtx) {
-      // Заливаємо білим
+      // Fill white
       tempCtx.fillStyle = '#ffffff';
       tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-      // Малюємо поверх зображення з основного канвасу
+      // Draw original canvas content (without grid lines)
       tempCtx.drawImage(canvas, 0, 0);
     }
 
@@ -180,6 +191,15 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   if (showResult) {
     return <CompletionScreen onBack={onBack} score={score} total={quizQueue.length} />;
   }
+
+  // CSS for Grid Pattern
+  const gridStyle = {
+    backgroundImage: `
+      linear-gradient(#f1f5f9 1px, transparent 1px),
+      linear-gradient(90deg, #f1f5f9 1px, transparent 1px)
+    `,
+    backgroundSize: '50px 50px'
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-purple-50">
@@ -226,16 +246,33 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           onTouchStart={startDrawing}
           onTouchMove={draw}
           onTouchEnd={stopDrawing}
+          style={gridStyle}
           className="touch-none block w-[320px] h-[320px] md:w-[400px] md:h-[400px] cursor-crosshair"
         />
         
         {showAnswer && (
-          <div className="absolute inset-0 bg-white/95 flex flex-col items-center justify-center animate-pop-in z-20">
-            <div className="mb-4 transform scale-90">
+          <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center animate-pop-in z-20">
+            <div className="mb-6 transform scale-90">
               <LetterCard letter={currentLetter.char} size="lg" isDifficult={currentLetter.isDifficult} />
             </div>
-            <div className={`px-10 py-4 rounded-full font-black text-white shadow-xl text-2xl ${feedback === 'correct' ? 'bg-green-500' : 'bg-orange-500'}`}>
-               {feedback === 'correct' ? 'ВІРНО! 🌟' : 'Спробуй ще! ✍️'}
+
+            {/* New Text-Only Feedback Style */}
+            <div className="text-center">
+                {feedback === 'correct' ? (
+                    <div className="animate-bounce">
+                        <div className="text-6xl mb-2">👍</div>
+                        <div className="text-4xl font-black text-green-500 uppercase tracking-wide drop-shadow-sm">
+                            Молодець!
+                        </div>
+                    </div>
+                ) : (
+                    <div className="animate-shake">
+                        <div className="text-6xl mb-2">😢</div>
+                        <div className="text-3xl font-black text-orange-500 uppercase tracking-wide drop-shadow-sm">
+                            Спробуй ще!
+                        </div>
+                    </div>
+                )}
             </div>
           </div>
         )}
@@ -243,7 +280,7 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         {isChecking && (
           <div className="absolute inset-0 bg-white/95 flex flex-col items-center justify-center z-30">
             <div className="w-14 h-14 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="font-black text-purple-600 text-xl tracking-wide uppercase">Перевірка...</p>
+            <p className="font-black text-purple-600 text-xl tracking-wide uppercase">Дивлюсь...</p>
           </div>
         )}
       </div>
