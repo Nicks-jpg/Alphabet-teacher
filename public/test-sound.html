@@ -71,6 +71,10 @@
             logDiv.innerText = '';
         };
 
+        window.clearLog = () => {
+            logDiv.innerText = '';
+        };
+
         function log(msg) {
             console.log(msg);
             logDiv.innerText += msg + '\n----------------\n';
