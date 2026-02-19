@@ -33,6 +33,21 @@ export const SettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
             <p className="text-xs text-red-400 mt-2">Вкажіть букви через кому. Вони будуть з'являтися в 4 рази частіше за інші.</p>
           </div>
 
+          {/* Confusing Pairs Setting */}
+          <div className="bg-purple-50 p-4 rounded-2xl">
+            <label className="block text-sm font-bold text-purple-600 mb-2 uppercase tracking-wider">Сплутані пари (для тесту)</label>
+            <input
+              type="text"
+              value={settings.confusingPairs}
+              onChange={(e) => setSettings({...settings, confusingPairs: e.target.value})}
+              placeholder="Наприклад: Б-В, М-Н, Ш-Щ"
+              className="w-full p-3 rounded-xl border-2 border-purple-100 focus:border-purple-400 outline-none font-bold text-lg"
+            />
+            <p className="text-xs text-purple-400 mt-2">
+              Вкажіть пари букв через дефіс (Б-В). Якщо у тесті правильна відповідь "Б", то серед варіантів обов'язково буде "В", щоб заплутати.
+            </p>
+          </div>
+
           {/* Session Length Setting */}
           <div className="bg-orange-50 p-4 rounded-2xl">
             <label className="block text-sm font-bold text-orange-600 mb-2 uppercase tracking-wider">Тривалість заняття</label>
@@ -61,8 +76,8 @@ export const SettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
               onChange={(e) => setSettings({...settings, ttsProvider: e.target.value as TTSProvider})}
               className="w-full p-3 rounded-xl border-2 border-blue-200 focus:border-blue-500 outline-none"
             >
-              <option value={TTSProvider.GEMINI}>Google Gemini (Рекомендовано)</option>
-              <option value={TTSProvider.OPENAI_COMPATIBLE}>Локальний / Кастомний (OpenAI compatible)</option>
+              <option value={TTSProvider.GEMINI}>Google Gemini (Перевірка малюнків)</option>
+              <option value={TTSProvider.OPENAI_COMPATIBLE}>Локальний / Кастомний</option>
             </select>
           </div>
 
@@ -77,6 +92,7 @@ export const SettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) =>
                   placeholder="Вставте ваш ключ..."
                   className="w-full p-3 rounded-xl border-2 border-gray-100 focus:border-blue-400 outline-none"
                 />
+                <p className="text-xs text-gray-400 mt-1">Використовується ТІЛЬКИ для перевірки малюнків (Write Mode).</p>
               </div>
             </div>
           ) : (

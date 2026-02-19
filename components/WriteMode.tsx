@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { UKRAINIAN_ALPHABET } from '../constants';
 import { speakUkrainian, checkDrawing, unlockAudio, getSettings } from '../services/speechService';
 import { LetterCard } from './LetterCard';
+import { CompletionScreen } from './CompletionScreen';
 
 export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const settings = useMemo(() => getSettings(), []);
@@ -14,6 +15,8 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [isChecking, setIsChecking] = useState(false);
   const [showAnswer, setShowAnswer] = useState(false);
   const [feedback, setFeedback] = useState<'idle' | 'correct' | 'incorrect'>('idle');
+  const [showResult, setShowResult] = useState(false);
+  const [score, setScore] = useState(0);
 
   const quizQueue = useMemo(() => {
     const limit = settings.sessionLimit || 33;
@@ -32,9 +35,6 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Grid removed as per user request to "simply draw on white background"
-    // and to prevent the "thick grid" bug.
     
     ctx.beginPath();
     setFeedback('idle');
@@ -105,8 +105,6 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     ctx.lineTo(x, y);
     ctx.stroke();
 
-    // Для плавних ліній не робимо beginPath/moveTo на кожен крок,
-    // але якщо це потрібно для сумісності з попереднім кодом:
     ctx.beginPath();
     ctx.moveTo(x, y);
   };
@@ -121,6 +119,7 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     
     setIsChecking(false);
     setFeedback(isCorrect ? 'correct' : 'incorrect');
+    if (isCorrect) setScore(s => s + 1);
     setShowAnswer(true);
   };
 
@@ -128,7 +127,7 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     if (currentIndex < quizQueue.length - 1) {
       setCurrentIndex(prev => prev + 1);
     } else {
-      onBack();
+      setShowResult(true);
     }
   };
 
@@ -136,19 +135,31 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     clearCanvas();
   };
 
+  if (showResult) {
+    return <CompletionScreen onBack={onBack} score={score} total={quizQueue.length} />;
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-slate-50">
-      <div className="w-full max-w-md flex justify-between items-center mb-6">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-purple-50">
+      <div className="w-full max-w-md flex justify-between items-center mb-4">
         <button onClick={onBack} className="bg-white border-2 border-slate-200 px-4 py-2 rounded-xl font-bold text-slate-600">Назад</button>
         <div className="text-xl font-bold text-purple-600">Слухай і пиши ✍️</div>
         <div className="text-sm font-bold text-slate-400">{currentIndex + 1}/{quizQueue.length}</div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="w-full max-w-md h-3 bg-slate-200 rounded-full mb-6 overflow-hidden">
+        <div
+          className="h-full bg-purple-500 transition-all duration-500 ease-out"
+          style={{ width: `${((currentIndex) / quizQueue.length) * 100}%` }}
+        ></div>
       </div>
 
       <div className="mb-6">
         <button 
           onClick={playSound}
           disabled={isChecking}
-          className="bg-blue-100 hover:bg-blue-200 text-blue-600 px-8 py-4 rounded-2xl font-bold flex items-center gap-2 transition-all active:scale-95 shadow-md"
+          className="bg-purple-100 hover:bg-purple-200 text-purple-600 px-8 py-4 rounded-2xl font-bold flex items-center gap-2 transition-all active:scale-95 shadow-md"
         >
           <span className="text-3xl">🔊</span> Послухати ще раз
         </button>
@@ -170,7 +181,7 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         />
         
         {showAnswer && (
-          <div className="absolute inset-0 bg-white/70 flex flex-col items-center justify-center animate-pop-in pointer-events-none">
+          <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center animate-pop-in pointer-events-none">
             <div className="mb-4">
               <LetterCard letter={currentLetter.char} size="lg" isDifficult={currentLetter.isDifficult} />
             </div>
@@ -211,14 +222,14 @@ export const WriteMode: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             {feedback === 'incorrect' ? (
               <button
                 onClick={handleRetry}
-                className="flex-1 bg-orange-500 text-white font-bold py-5 rounded-2xl shadow-lg animate-pulse text-lg"
+                className="flex-1 bg-orange-500 text-white font-bold py-5 rounded-2xl shadow-lg animate-pulse text-lg pointer-events-auto"
               >
                 Стерти і спробувати ще 🔄
               </button>
             ) : (
               <button
                 onClick={handleNext}
-                className="flex-1 bg-green-500 text-white font-bold py-5 rounded-2xl shadow-lg text-lg transform active:scale-95"
+                className="flex-1 bg-green-500 text-white font-bold py-5 rounded-2xl shadow-lg text-lg transform active:scale-95 pointer-events-auto"
               >
                 Наступна буква ➔
               </button>
